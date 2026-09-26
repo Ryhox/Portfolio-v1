@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Experience from "@/components/Experience";
 import RollText from "@/components/RollText";
 import PlaygroundHint from "@/components/PlaygroundHint";
@@ -401,19 +402,23 @@ export default function Home() {
           <div className="garden" aria-hidden />
           {/* The floor of the whole page: a meadow (ground in Backdrop.tsx, blades in stage/Grass.tsx). */}
           <div className="ground">
-          <footer className="footer">
-            <span>
-              © {new Date().getFullYear()} {profile.handle}
-            </span>
-            <PlaygroundHint />
-            <span>
-              cat by{" "}
-              <a href="https://sketchfab.com/3d-models/chonky-cat-trio-d9a2d94179384803af7456d633283496" target="_blank" rel="noreferrer">
-                Kanna-Nakajima
-              </a>{" "}
-              · CC BY 4.0
-            </span>
-          </footer>
+            <footer className="footer">
+              <span>
+                © {new Date().getFullYear()} {profile.handle} · <Link href="/legal">Legal</Link> · <Link href="/privacy">Privacy</Link>
+              </span>
+              <PlaygroundHint />
+              <span>
+                cat by{" "}
+                <a href="https://sketchfab.com/3d-models/chonky-cat-trio-d9a2d94179384803af7456d633283496" target="_blank" rel="noreferrer">
+                  Kanna-Nakajima
+                </a>
+                , iPod by{" "}
+                <a href="https://sketchfab.com/3d-models/ipod-classic-13dbe30b0e45408c8bfaddfe6a4e8786" target="_blank" rel="noreferrer">
+                  Timothy Ahene
+                </a>{" "}
+                · <Link href="/legal#credits">CC BY 4.0</Link>
+              </span>
+            </footer>
           </div>
         </section>
       </main>

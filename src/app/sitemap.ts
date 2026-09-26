@@ -8,5 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 1,
     },
+    { url: "https://ryhox.dev/legal", changeFrequency: "yearly", priority: 0.1 },
+    { url: "https://ryhox.dev/privacy", changeFrequency: "yearly", priority: 0.1 },
   ];
 }

@@ -56,6 +56,9 @@
 html {
   /* Nothing (rotated marquee, giant type) may ever widen the page on phones. */
   overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
   background: var(--bg);
   color: var(--ink);
   text-shadow: 0 1px 1px rgb(255 255 255 / calc(0.45 * (1 - var(--night))));
@@ -70,9 +73,11 @@ body {
   overflow-x: clip;
 }
 
-a {
+a,
+button {
   color: inherit;
   text-decoration: none;
+  touch-action: manipulation;
 }
 
 img {
@@ -161,12 +166,14 @@ img {
   pointer-events: none;
 }
 
-.chrome-pill:hover {
-  filter: brightness(1.04) saturate(1.1);
-  box-shadow:
-    var(--chrome-ring),
-    0 0 0 5px rgba(255, 255, 255, 0.35),
-    0 12px 30px -8px rgba(90, 100, 230, 0.55);
+@media (hover: hover) {
+  .chrome-pill:hover {
+    filter: brightness(1.04) saturate(1.1);
+    box-shadow:
+      var(--chrome-ring),
+      0 0 0 5px rgba(255, 255, 255, 0.35),
+      0 12px 30px -8px rgba(90, 100, 230, 0.55);
+  }
 }
 
 /* ---------- 3D layer + preloader ---------- */
@@ -295,9 +302,11 @@ html.wand-on .contact a * {
   display: block;
 }
 
-a:hover .roll-inner,
-button:hover .roll-inner {
-  transform: translateY(-50%);
+@media (hover: hover) {
+  a:hover .roll-inner,
+  button:hover .roll-inner {
+    transform: translateY(-50%);
+  }
 }
 
 /* ---------- Scroll progress ---------- */
@@ -339,7 +348,7 @@ button:hover .roll-inner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px var(--gutter);
+  padding: calc(20px + env(safe-area-inset-top)) calc(var(--gutter) + env(safe-area-inset-right)) 20px calc(var(--gutter) + env(safe-area-inset-left));
   color: var(--ink);
 }
 
@@ -396,13 +405,15 @@ button:hover .roll-inner {
   pointer-events: none;
 }
 
-.glass-pill:hover {
-  filter: brightness(1.08) saturate(1.2);
-  box-shadow:
-    inset 0 0 0 1.5px #fff,
-    inset 0 -3px 8px rgba(255, 255, 255, 0.6),
-    0 0 0 4px rgba(255, 255, 255, 0.35),
-    0 6px 18px -4px rgba(40, 110, 230, 0.6);
+@media (hover: hover) {
+  .glass-pill:hover {
+    filter: brightness(1.08) saturate(1.2);
+    box-shadow:
+      inset 0 0 0 1.5px #fff,
+      inset 0 -3px 8px rgba(255, 255, 255, 0.6),
+      0 0 0 4px rgba(255, 255, 255, 0.35),
+      0 6px 18px -4px rgba(40, 110, 230, 0.6);
+  }
 }
 
 /* ---------- Hero ---------- */
@@ -1042,8 +1053,10 @@ button:hover .roll-inner {
   display: none;
 }
 
-.tk-btn:hover {
-  filter: brightness(1.08);
+@media (hover: hover) {
+  .tk-btn:hover {
+    filter: brightness(1.08);
+  }
 }
 
 .tk-btn:focus-visible {
@@ -1269,8 +1282,10 @@ button:hover .roll-inner {
   transition: filter 0.6s ease;
 }
 
-.panel:hover .panel-img {
-  filter: saturate(1.15) brightness(1.05);
+@media (hover: hover) {
+  .panel:hover .panel-img {
+    filter: saturate(1.15) brightness(1.05);
+  }
 }
 
 /* Number + name under the picture, nudged up so the name just overlaps its bottom edge. */
@@ -1852,10 +1867,12 @@ button:hover .roll-inner {
   transition: color 0.3s ease;
 }
 
-.panel-more:hover .more-handle {
-  color: var(--ink);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+@media (hover: hover) {
+  .panel-more:hover .more-handle {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
 }
 
 /* ---------- Contact ---------- */
@@ -1937,6 +1954,13 @@ button:hover .roll-inner {
   color: #0f2d18;
 }
 
+/* Desktop: the iPod peeks up in the bottom-right corner; the credits stay clear of it. */
+@media (min-width: 900px) {
+  .footer {
+    padding-right: 230px;
+  }
+}
+
 .footer > :first-child {
   text-align: left;
 }
@@ -1955,6 +1979,509 @@ button:hover .roll-inner {
   font-weight: 700;
   text-align: center;
   min-height: 1.3em;
+}
+
+/* ---------- The iPod (components/IPod.tsx + ipod/) ---------- */
+
+/* One canvas at "picked up" size. In the corner it's the same canvas scaled down and pushed below the edge,
+   so just the top of the iPod (its screen) peeks up; picked up, it slides out. */
+.ipod {
+  --dock: 0.55;
+  --open-s: var(--ipod-open, 1);
+  position: fixed;
+  right: calc(10px + env(safe-area-inset-right));
+  bottom: calc(6px + env(safe-area-inset-bottom));
+  z-index: 40;
+  width: 440px;
+  height: 725px;
+  transform-origin: 100% 100%;
+  transform: translateY(420px) scale(var(--dock));
+  opacity: 0;
+  transition:
+    transform 0.9s var(--ease-out),
+    opacity 0.4s ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ipod.is-on {
+  transform: translateY(222px) scale(var(--dock));
+  opacity: 1;
+}
+
+/* Hover: it comes up a little, ready to be picked up. */
+.ipod.is-on:not(.is-open):hover,
+.ipod.is-on:not(.is-open):focus-visible {
+  transform: translateY(204px) scale(var(--dock));
+}
+
+.ipod.is-open {
+  transform: scale(var(--open-s));
+  transition-duration: 0.75s;
+  /* Fingers turn the wheel instead of scrolling the page. */
+  touch-action: none;
+}
+
+.ipod.is-open .ipod-canvas {
+  filter: drop-shadow(0 22px 26px rgba(12, 32, 90, 0.34));
+}
+
+.ipod:focus-visible .ipod-canvas {
+  filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 8px #fff);
+}
+
+/* A little speech bubble when you hover the iPod in the corner. */
+.ipod-tip {
+  position: fixed;
+  right: calc(236px + env(safe-area-inset-right));
+  bottom: 96px;
+  z-index: 40;
+  padding: 0.5em 0.9em;
+  border-radius: 999px 999px 4px 999px;
+  background: var(--chrome);
+  box-shadow: var(--chrome-ring);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-day);
+  text-shadow: none;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px) scale(0.92);
+  transform-origin: 100% 100%;
+  transition:
+    opacity 0.25s ease,
+    transform 0.45s var(--ease-out);
+}
+
+.ipod:hover + .ipod-tip,
+.ipod:focus-visible + .ipod-tip {
+  opacity: 1;
+  transform: none;
+}
+
+/* Put-away button, above the iPod's top-right corner. */
+.ipod-close {
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--chrome);
+  box-shadow: var(--chrome-ring);
+  color: var(--ink-day);
+  animation: ipod-pop 0.5s var(--ease-out) 0.25s both;
+}
+
+.ipod-close svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ipod-close:focus-visible {
+  outline: 2px solid var(--ink-day);
+  outline-offset: 3px;
+}
+
+/* Previews link to the full song: top left, across from the put-away button. */
+.ipod-link {
+  position: absolute;
+  top: -6px;
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  height: 44px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: var(--chrome);
+  box-shadow: var(--chrome-ring);
+  font-family: var(--font-ui), sans-serif;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-day);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  animation: ipod-pop 0.5s var(--ease-out) 0.3s both;
+}
+
+.ipod-link:focus-visible {
+  outline: 2px solid var(--ink-day);
+  outline-offset: 3px;
+}
+
+@keyframes ipod-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+
+/* Phones: a chrome button in the corner; the iPod comes up in the middle of the screen. */
+.ipod-fab {
+  position: fixed;
+  right: calc(14px + env(safe-area-inset-right));
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 38;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--chrome);
+  box-shadow: var(--chrome-ring);
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  transform: translateY(24px) scale(0.6);
+  pointer-events: none;
+  transition:
+    opacity 0.4s ease,
+    transform 0.7s var(--ease-out);
+}
+
+.ipod-fab.is-on {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.ipod-fab.is-hidden {
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+}
+
+.ipod-fab:active {
+  transform: scale(0.92);
+}
+
+.ipod-fab svg {
+  width: 24px;
+  height: 36px;
+  filter: drop-shadow(0 2px 2px rgba(18, 42, 100, 0.3));
+}
+
+.ipod-fab:focus-visible {
+  outline: 2px solid var(--ink-day);
+  outline-offset: 3px;
+}
+
+/* Something's playing: a tiny equaliser on the button. */
+.ipod-fab-eq {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  padding: 3px 4px;
+  border-radius: 999px;
+  background: var(--peri);
+  box-shadow: 0 0 0 1.5px #fff;
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 0.3s ease,
+    transform 0.5s var(--ease-out);
+}
+
+.ipod-fab.is-playing .ipod-fab-eq {
+  opacity: 1;
+  transform: none;
+}
+
+.ipod-fab-eq i {
+  width: 2.5px;
+  height: 100%;
+  border-radius: 2px;
+  background: #fff;
+  transform-origin: bottom;
+  animation: tk-eq 0.8s ease-in-out infinite alternate;
+}
+
+.ipod-fab-eq i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+.ipod-fab-eq i:nth-child(3) {
+  animation-delay: -0.55s;
+}
+
+.ipod-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(8, 18, 52, 0.42);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: ipod-fade 0.35s ease both;
+}
+
+@keyframes ipod-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 899px) {
+  .ipod,
+  .ipod.is-on {
+    right: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    transform-origin: 50% 100%;
+    transform: translateX(50%) translateY(40px) scale(calc(var(--open-s) * 0.86));
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      transform 0.5s var(--ease-out),
+      opacity 0.3s ease,
+      visibility 0s linear 0.5s;
+  }
+
+  .ipod.is-open {
+    transform: translateX(50%) scale(var(--open-s));
+    opacity: 1;
+    visibility: visible;
+    transition:
+      transform 0.7s var(--ease-out),
+      opacity 0.3s ease;
+  }
+
+}
+
+
+/* ---------- Legal & privacy: one frosted card on the sky ---------- */
+
+.legal {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(20px + env(safe-area-inset-top)) 16px calc(56px + env(safe-area-inset-bottom));
+  text-shadow: none;
+}
+
+.legal-top {
+  width: min(100%, 44rem);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.legal-mark {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-day);
+}
+
+.legal-back {
+  height: 2.4rem;
+  padding: 0 1.1rem;
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+/* The folder: a blue-grey back sheet whose tab shows on the left (with the page's name), and the white
+   front sheet, lower on the left, rising to full height on the right in an S-curve. One shadow for it all. */
+.folder {
+  --step: 56px;
+  --tab: clamp(120px, 30%, 250px);
+  --shoulder: 96px;
+  position: relative;
+  width: min(100%, 44rem);
+  padding-top: var(--step);
+  filter: drop-shadow(0 26px 30px rgba(15, 34, 87, 0.26));
+}
+
+.folder-back {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: calc(var(--step) + 60px);
+  border-radius: 24px 24px 0 0;
+  background: linear-gradient(180deg, #aebbcd, #94a3b9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.folder-back span {
+  position: absolute;
+  left: 26px;
+  top: 0;
+  height: var(--step);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.folder-front {
+  position: relative;
+  padding: clamp(28px, 6vw, 52px);
+  border-radius: 24px 0 24px 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f3f6fa 100%);
+  color: #2a3a63;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+/* The S-curve and the raised part of the front, both the front's top white. */
+.folder-shoulder {
+  position: absolute;
+  top: calc(-1 * var(--step));
+  left: var(--tab);
+  width: var(--shoulder);
+  height: calc(var(--step) + 1px);
+  fill: #fff;
+}
+
+.folder-lip {
+  position: absolute;
+  top: calc(-1 * var(--step));
+  left: calc(var(--tab) + var(--shoulder) - 1px);
+  right: 0;
+  height: calc(var(--step) + 1px);
+  border-radius: 0 24px 0 0;
+  background: #fff;
+}
+
+@media (max-width: 600px) {
+  .folder {
+    --step: 46px;
+    --shoulder: 70px;
+  }
+}
+
+.folder-front h1 {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.2rem, 7vw, 3rem);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--ink-day);
+}
+
+.legal-lead {
+  margin-top: 0.8rem;
+  font-size: 1.08rem;
+  color: var(--ink-soft-day);
+}
+
+.folder-front section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(15, 34, 87, 0.1);
+}
+
+.folder-front h2 {
+  margin-bottom: 0.7rem;
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.folder-front p + p,
+.folder-front p + ul,
+.folder-front ul + p {
+  margin-top: 0.75rem;
+}
+
+.folder-front ul {
+  list-style: none;
+}
+
+.folder-front li {
+  position: relative;
+  padding-left: 1.2rem;
+}
+
+.folder-front li + li {
+  margin-top: 0.6rem;
+}
+
+.folder-front li::before {
+  content: "";
+  position: absolute;
+  left: 0.15rem;
+  top: 0.72em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.folder-front a {
+  font-weight: 700;
+  color: var(--ink-day);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgba(109, 116, 228, 0.45);
+  transition: text-decoration-color 0.3s ease;
+}
+
+.folder-front a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (hover: hover) {
+  .folder-front a:hover {
+    text-decoration-color: var(--accent);
+  }
+}
+
+.folder-front code {
+  padding: 0.1em 0.45em;
+  border-radius: 6px;
+  background: rgba(109, 116, 228, 0.1);
+  font-size: 0.88em;
+  font-weight: 700;
+  color: var(--ink-day);
+}
+
+.legal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.6rem 1.2rem;
+  margin-top: 2.4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(15, 34, 87, 0.1);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint-day);
+}
+
+.legal-foot nav {
+  display: flex;
+  gap: 1.2rem;
+}
+
+.folder-front .legal-foot a {
+  text-decoration: none;
+  color: var(--ink-soft-day);
 }
 
 /* ---------- 404: one screen, no scrolling ---------- */
@@ -2019,8 +2546,10 @@ html:has(.nf) body {
   letter-spacing: -0.01em;
 }
 
-.nf-home:hover {
-  transform: translateY(-3px);
+@media (hover: hover) {
+  .nf-home:hover {
+    transform: translateY(-3px);
+  }
 }
 
 .nf-home:active {
@@ -2035,6 +2564,71 @@ html:has(.nf) body {
 /* ---------- Small screens: gallery stacks vertically ---------- */
 
 @media (max-width: 899px) {
+  /* The ticker: smaller buttons, no "Now playing" label, so the words have room to run. */
+  .ticker {
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .tk-controls {
+    gap: 4px;
+  }
+
+  .tk-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .tk-btn.is-play {
+    width: 36px;
+    height: 36px;
+  }
+
+  .tk-lcd {
+    height: 38px;
+    padding: 0 12px;
+  }
+
+  .tk-label {
+    display: none;
+  }
+
+  .tk-eq {
+    height: 22px;
+    padding-right: 4px;
+  }
+
+  .ticker-word {
+    font-size: 0.72rem;
+  }
+
+  /* "And much more": the GitHub mark and handle stack instead of running off the side. */
+  .more-link {
+    flex-wrap: wrap;
+  }
+
+  .more-icon {
+    width: 110px;
+    height: 110px;
+  }
+
+  .more-handle {
+    font-size: 1rem;
+  }
+
+  /* The constellation labels, a size down. */
+  .sky-label {
+    font-size: 0.64rem;
+  }
+
+  .sky-label.is-key {
+    font-size: 0.86rem;
+  }
+
+  .sky-card {
+    width: min(16rem, 76vw);
+  }
+
   .nav-links {
     gap: 6px;
     font-size: 0.64rem;
@@ -2170,10 +2764,16 @@ html:has(.nf) body {
     margin-left: 0;
   }
 
+  /* The three contact capsules fit one row. */
+  .contact-links {
+    gap: 0.6rem;
+  }
+
   .contact-links a,
   .contact-links .copy-handle {
     height: 3rem;
-    padding: 0 1.3rem;
+    padding: 0 1.05rem;
+    font-size: 1rem;
   }
 
   .footer {
@@ -2189,5 +2789,16 @@ html:has(.nf) body {
 
   .playground-hint {
     order: -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue-char > span,
+  .scroll-cue-line::after,
+  .tk-eq i,
+  .ipod-fab-eq i,
+  .sky-label.is-hot .sky-hit::before,
+  .sky-label:hover .sky-hit::before {
+    animation: none;
   }
 }

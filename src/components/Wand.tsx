@@ -19,7 +19,7 @@ export default function Wand() {
       if (!stage.playground) return false;
       const contact = document.querySelector(".contact");
       const target = e.target as HTMLElement | null;
-      if (!contact || target?.closest("a, button")) return false;
+      if (!contact || target?.closest("a, button, [data-ipod]")) return false;
       const r = contact.getBoundingClientRect();
       return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
     };

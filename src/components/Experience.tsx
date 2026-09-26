@@ -7,6 +7,7 @@ import SmoothScroll, { lenis } from "./SmoothScroll";
 import Motion from "./Motion";
 import Wand from "./Wand";
 import ActionFx from "./ActionFx";
+import IPod from "./IPod";
 import TerrainDebug from "./stage/TerrainDebug";
 import { intro } from "@/lib/intro";
 import { introFx } from "@/lib/introFx";
@@ -124,40 +125,44 @@ export default function Experience({ children }: { children: ReactNode }) {
   }, [motionSetup, render]);
 
   return (
-    <div ref={root} className={revealed ? "app is-ready" : "app"}>
-      <SmoothScroll />
-      <Motion ready={sceneReady && stageReady} onReady={onMotionReady} />
-      <Wand />
-      <ActionFx ready={motionSetup} />
-      <TerrainDebug />
-      <div className="scene" aria-hidden>
-        <Scene eventSource={root} onReady={onSceneReady} onProgress={onProgress} />
-      </div>
-      <div className="stage" aria-hidden>
-        <StageCanvas eventSource={root} onReady={onStageReady} />
-      </div>
-      <div className="progress" aria-hidden>
-        <div className="progress-fill" />
-      </div>
-      <div ref={loader} className="loader" aria-hidden>
-        <div className="loader-count">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="loader-digit"
-              data-d={i === 2 ? "0" : ""}
-              style={i === 2 ? undefined : { display: "none" }}
-              ref={(el) => {
-                digits.current[i] = el;
-              }}
-            >
-              {i === 2 ? "0" : ""}
-            </span>
-          ))}
-          <span className="loader-pct">%</span>
+    <>
+      <div ref={root} className={revealed ? "app is-ready" : "app"}>
+        <SmoothScroll />
+        <Motion ready={sceneReady && stageReady} onReady={onMotionReady} />
+        <Wand />
+        <ActionFx ready={motionSetup} />
+        <TerrainDebug />
+        <div className="scene" aria-hidden>
+          <Scene eventSource={root} onReady={onSceneReady} onProgress={onProgress} />
         </div>
+        <div className="stage" aria-hidden>
+          <StageCanvas eventSource={root} onReady={onStageReady} />
+        </div>
+        <div className="progress" aria-hidden>
+          <div className="progress-fill" />
+        </div>
+        <div ref={loader} className="loader" aria-hidden>
+          <div className="loader-count">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="loader-digit"
+                data-d={i === 2 ? "0" : ""}
+                style={i === 2 ? undefined : { display: "none" }}
+                ref={(el) => {
+                  digits.current[i] = el;
+                }}
+              >
+                {i === 2 ? "0" : ""}
+              </span>
+            ))}
+            <span className="loader-pct">%</span>
+          </div>
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
+      {/* Outside the app root: presses on the iPod never reach the 3D scenes behind it. */}
+      <IPod ready={revealed} />
+    </>
   );
 }

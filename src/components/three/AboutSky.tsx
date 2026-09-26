@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { about } from "@/lib/about";
 import { stage } from "@/lib/stage";
 import { createBubbleMaterial, createGlowMaterial } from "./materials";
@@ -322,6 +323,52 @@ function segmentHitsRect(ax: number, ay: number, bx: number, by: number, x0: num
 }
 
 type Label = { el: HTMLElement; hit: HTMLElement | null; fig: number; star: number; w: number; h: number; side: number; ox: number; oy: number };
+type Rect = { l: number; t: number; r: number; b: number };
+// Where the constellations go (screen px): center and half-size of the chart's [-1, 1] square.
+type Fit = { x: number; y: number; s: number; w: number; h: number };
+
+const overlaps = (a: Rect, b: Rect) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+const grow = (r: Rect, p: number): Rect => ({ l: r.l - p, t: r.t - p, r: r.r + p, b: r.b + p });
+
+// The constellations' spot: where they'd like to be (right of the text on desktop, upper middle on phones),
+// moved and shrunk as little as needed to stay clear of the text, the counter and the corners.
+function fitSky(W: number, H: number, tanV: number, wide: boolean, blocks: Rect[]): Fit {
+  const toPx = H / 2 / tanV;
+  const halfH = Math.atan(tanV * (W / H));
+  const want = wide
+    ? { x: W * 0.65, y: H / 2 + Math.tan(deg(0.8)) * toPx, s: Math.tan(Math.min(deg(10), halfH * 0.38)) * toPx }
+    : { x: W / 2, y: H * 0.35, s: Math.tan(Math.min(deg(10), halfH * 0.56)) * toPx };
+  // Room around the stars for their labels.
+  const mx = wide ? 70 : 34;
+  const my = wide ? 30 : 20;
+  const pad = 8;
+  let best: Fit = { x: want.x, y: want.y, s: want.s * 0.45, w: W, h: H };
+  let cost = Infinity;
+  for (let k = 1; k >= 0.449; k -= 0.05) {
+    const s = want.s * k;
+    const hw = s + mx;
+    const hh = s + my;
+    const x0 = hw + pad;
+    const x1 = W - hw - pad;
+    const y0 = hh + pad;
+    const y1 = H - hh - pad;
+    if (x1 < x0 || y1 < y0) continue;
+    const scale = (1 - k) * 0.6;
+    if (scale >= cost) break;
+    const xs = [Math.min(x1, Math.max(x0, want.x)), ...Array.from({ length: 13 }, (_, i) => x0 + ((x1 - x0) * i) / 12)];
+    const ys = [Math.min(y1, Math.max(y0, want.y)), ...Array.from({ length: 13 }, (_, i) => y0 + ((y1 - y0) * i) / 12)];
+    for (const x of xs)
+      for (const y of ys) {
+        const c = ((x - want.x) / W) ** 2 + ((y - want.y) / H) ** 2 + scale;
+        if (c >= cost) continue;
+        const r = { l: x - hw, t: y - hh, r: x + hw, b: y + hh };
+        if (blocks.some((b) => overlaps(r, b))) continue;
+        cost = c;
+        best = { x, y, s, w: W, h: H };
+      }
+  }
+  return best;
+}
 
 export default function AboutSky() {
   const camera = useThree((s) => s.camera);
@@ -528,6 +575,10 @@ export default function AboutSky() {
     [slots],
   );
 
+  // The page's text on the stage (the abilities, the counter), which the sky keeps clear of. In stage px,
+  // which are screen px while it's pinned.
+  const layout = useRef({ text: null as Rect | null, meta: null as Rect | null, fit: null as Fit | null });
+
   useEffect(() => {
     labels.current = Array.from(document.querySelectorAll<HTMLElement>(".sky-label")).map((el) => ({
       el,
@@ -540,10 +591,36 @@ export default function AboutSky() {
       ox: NaN,
       oy: NaN,
     }));
-    // Label sizes change with the viewport: measure again.
-    const onResize = () => labels.current.forEach((l) => (l.w = l.h = 0));
+    const measure = () => {
+      const stageEl = document.querySelector<HTMLElement>(".about-stage");
+      if (!stageEl) return;
+      const s = stageEl.getBoundingClientRect();
+      const range = document.createRange();
+      let text: Rect | null = null;
+      // The words themselves (not their full-width boxes), over every ability.
+      for (const el of document.querySelectorAll(".ab-title, .ab-line, .ab-proof")) {
+        range.selectNodeContents(el);
+        const r = range.getBoundingClientRect();
+        if (!r.width) continue;
+        const q = { l: r.left - s.left, t: r.top - s.top, r: r.right - s.left, b: r.bottom - s.top };
+        text = text ? { l: Math.min(text.l, q.l), t: Math.min(text.t, q.t), r: Math.max(text.r, q.r), b: Math.max(text.b, q.b) } : q;
+      }
+      const m = document.querySelector(".ab-meta")?.getBoundingClientRect();
+      layout.current = { text, meta: m ? { l: m.left - s.left, t: m.top - s.top, r: m.right - s.left, b: m.bottom - s.top } : null, fit: null };
+    };
+    // Sizes change with the viewport: measure again.
+    const onResize = () => {
+      labels.current.forEach((l) => (l.w = l.h = 0));
+      measure();
+    };
+    measure();
+    document.fonts?.ready.then(measure);
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    ScrollTrigger.addEventListener("refresh", measure);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      ScrollTrigger.removeEventListener("refresh", measure);
+    };
   }, []);
 
   useFrame((state, dtFrame) => {
@@ -574,14 +651,21 @@ export default function AboutSky() {
     const N = FIGURES.length;
     const M = slots.M;
     const focus = about.focus;
-    const aspect = size.width / size.height;
     const halfV = deg((camera as THREE.PerspectiveCamera).fov / 2);
-    const halfH = Math.atan(Math.tan(halfV) * aspect);
     const wide = size.width >= 900;
-    // Where the constellation sits: right of the text on desktop, upper middle on phones.
-    const offAz = wide ? Math.atan(0.3 * Math.tan(halfH)) : 0;
-    const offEl = wide ? -deg(0.8) : Math.atan(0.3 * Math.tan(halfV));
-    const S = Math.min(deg(10), wide ? halfH * 0.38 : halfH * 0.56);
+    // Where the constellation sits: right of the text on desktop, upper middle on phones, clear of the
+    // text, the counter and the corners (the iPod lives bottom right, the moon top left on phones).
+    const L = layout.current;
+    const blocks: Rect[] = [];
+    if (L.text) blocks.push(grow(L.text, 14));
+    if (L.meta) blocks.push(grow(L.meta, 10));
+    blocks.push(wide ? { l: size.width - 240, t: size.height - 170, r: size.width, b: size.height } : { l: size.width - 84, t: size.height - 84, r: size.width, b: size.height });
+    if (!wide && L.meta) blocks.push({ l: 0, t: 0, r: size.width * 0.34, b: L.meta.b + 6 });
+    if (!L.fit || L.fit.w !== size.width || L.fit.h !== size.height) L.fit = fitSky(size.width, size.height, Math.tan(halfV), wide, blocks);
+    const tanPx = Math.tan(halfV) / (size.height / 2);
+    const offAz = Math.atan((L.fit.x - size.width / 2) * tanPx);
+    const offEl = Math.atan((size.height / 2 - L.fit.y) * tanPx);
+    const S = Math.atan(L.fit.s * tanPx);
     const px = reduced ? 0 : state.pointer.x;
     const py = reduced ? 0 : state.pointer.y;
     const small = size.width < 700;
@@ -935,7 +1019,8 @@ export default function AboutSky() {
       for (let i = 0; i < segs.length; i += 4) if (segmentHitsRect(segs[i], segs[i + 1], segs[i + 2], segs[i + 3], x0, y0, x1, y1)) n++;
       return n;
     };
-    const placed: number[] = [];
+    // Labels keep off the text and the corners too.
+    const placed: number[] = blocks.flatMap((b) => [b.l, b.t, b.r, b.b]);
     let hovered = "";
     // Main tools claim their spot first.
     const order = labels.current.slice().sort((p, q) => Number(!!FIGURES[q.fig].stars[q.star].key) - Number(!!FIGURES[p.fig].stars[p.star].key));
@@ -1046,6 +1131,16 @@ const SKY_BUBBLES: { x: number; y: number; z: number; r: number }[] = [
   { x: 0.5, y: 0.78, z: -6.5, r: 0.09 },
   { x: -0.93, y: 0.2, z: -11, r: 0.2 },
 ];
+// Phones: fewer and smaller, up top and at the edges (the text fills the bottom half). r = 0: not shown.
+const SKY_BUBBLES_PHONE: typeof SKY_BUBBLES = [
+  { x: 0.86, y: 0.42, z: -8, r: 0.09 },
+  { x: -0.86, y: 0.3, z: -10, r: 0.12 },
+  { x: 0.88, y: -0.04, z: -7, r: 0.06 },
+  { x: -0.45, y: 0.9, z: -12, r: 0.07 },
+  { x: 0, y: 0, z: -9, r: 0 },
+  { x: 0, y: 0, z: -6.5, r: 0 },
+  { x: 0, y: 0, z: -11, r: 0 },
+];
 
 const haloMaterial = () =>
   new THREE.ShaderMaterial({
@@ -1093,6 +1188,7 @@ function SkyBubbles() {
   const moon = useRef<THREE.Mesh>(null);
   const glow = useRef<THREE.Mesh>(null);
   const state = useRef(SKY_BUBBLES.map(() => ({ dead: 0, grow: 1, jig: 0, jigV: 0 })));
+  const placing = useRef(SKY_BUBBLES);
   const v = useMemo(() => new THREE.Vector3(), []);
 
   const pop = (i: number) => (e: { stopPropagation: () => void }) => {
@@ -1101,7 +1197,7 @@ function SkyBubbles() {
     const b = state.current[i];
     if (!m || b.dead > 0) return;
     m.getWorldPosition(v);
-    world.pops.push({ pos: v.clone(), radius: SKY_BUBBLES[i].r * m.parent!.scale.x });
+    world.pops.push({ pos: v.clone(), radius: placing.current[i].r * m.parent!.scale.x });
     b.dead = 1.6;
     b.grow = 0;
     document.body.style.cursor = "";
@@ -1116,7 +1212,9 @@ function SkyBubbles() {
     const aspect = size.width / size.height;
     // Everything swells in (and shrinks away) with the same curve as the stars.
     const grow = vis * vis * (3 - 2 * vis);
-    SKY_BUBBLES.forEach((c, i) => {
+    const narrow = size.width < 900;
+    placing.current = narrow ? SKY_BUBBLES_PHONE : SKY_BUBBLES;
+    placing.current.forEach((c, i) => {
       const m = meshes.current[i];
       if (!m) return;
       const b = state.current[i];
@@ -1138,7 +1236,7 @@ function SkyBubbles() {
       const wob = Math.sin(t * 2 + i) * 0.02 + b.jig;
       const inflate = 1 - Math.pow(1 - b.grow, 3);
       const sc = c.r * inflate * Math.max(grow, 1e-4);
-      m.visible = vis > 0.01;
+      m.visible = vis > 0.01 && c.r > 0;
       m.scale.set(sc * (1 + wob), sc * (1 - wob), sc);
     });
     const mo = moon.current;
@@ -1147,11 +1245,13 @@ function SkyBubbles() {
       const depth = 14;
       const H = halfV * depth;
       mo.visible = gl.visible = vis > 0.01;
-      mo.position.set(-H * aspect * 0.62, H * 0.58 + Math.sin(t * 0.5) * 0.08, -depth);
+      // Phones: smaller, tucked into the top-left corner beside the counter.
+      if (narrow) mo.position.set(-H * aspect + 0.75, H - 0.95 + Math.sin(t * 0.5) * 0.05, -depth);
+      else mo.position.set(-H * aspect * 0.62, H * 0.58 + Math.sin(t * 0.5) * 0.08, -depth);
       mo.rotation.set(Math.sin(t * 0.3) * 0.12, Math.sin(t * 0.22) * 0.3, 0.5 + Math.sin(t * 0.4) * 0.06);
-      mo.scale.setScalar(0.72 * Math.max(grow, 1e-4));
+      mo.scale.setScalar((narrow ? 0.4 : 0.72) * Math.max(grow, 1e-4));
       gl.position.set(mo.position.x, mo.position.y, -depth - 0.6);
-      gl.scale.setScalar(4.2);
+      gl.scale.setScalar(narrow ? 2.4 : 4.2);
       halo.uniforms.uVis.value = grow;
       // Publish the seat in the middle of the crescent, in screen px: once night has fallen, the cat sits in it.
       if (mo.parent) {

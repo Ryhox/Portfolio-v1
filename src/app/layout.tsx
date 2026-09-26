@@ -81,10 +81,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3d84e8",
+  // The top of the sky, so the browser bar blends into the page.
+  themeColor: "#2f7fe2",
   colorScheme: "light",
   width: "device-width",
   initialScale: 1,
+  // Edge to edge on notched phones (the nav and the corners keep to the safe area).
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
