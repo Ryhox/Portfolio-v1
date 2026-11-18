@@ -16,6 +16,8 @@ export const player = {
   volume: 0.8,
   shuffle: false,
   repeat: "off" as "off" | "one" | "all",
+  // Stopped (nothing started yet, or stop() was pressed): the mini player on the page stays away.
+  stopped: true,
   listeners: new Set<() => void>(),
 };
 
@@ -71,6 +73,7 @@ async function begin() {
   if (!t) return;
   const a = el();
   player.playing = true;
+  player.stopped = false;
   emit();
   if (!t.preview) {
     a.src = SILENT;
@@ -106,6 +109,7 @@ export function toggle() {
     player.playing = false;
   } else if (loaded() && !audio!.ended) {
     player.playing = true;
+    player.stopped = false;
     audio!.play().catch(() => {
       player.playing = false;
       emit();
@@ -128,6 +132,17 @@ export function skip(dir: 1 | -1) {
     session();
     emit();
   }
+}
+
+// Stop: silence, back to the start of the song, and the mini player on the page goes away (the iPod keeps
+// its queue, so play picks the same song up again).
+export function stop() {
+  audio?.pause();
+  if (loaded()) audio!.currentTime = 0;
+  player.playing = false;
+  player.stopped = true;
+  session();
+  emit();
 }
 
 export function seek(to: number) {

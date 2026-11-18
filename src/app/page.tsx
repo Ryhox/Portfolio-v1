@@ -1,11 +1,38 @@
 import Link from "next/link";
 import Experience from "@/components/Experience";
 import RollText from "@/components/RollText";
-import PlaygroundHint from "@/components/PlaygroundHint";
 import CopyHandle from "@/components/CopyHandle";
+import ThemeToggle from "@/components/ThemeToggle";
 import ProjectActions, { MediaFx } from "@/components/ProjectActions";
-import { abilities, github, marquee, profile, projects, socials, tech } from "@/content";
-import { FIGURES } from "@/components/three/constellations";
+import Stack from "@/components/Stack";
+import GlassLabel from "@/components/GlassLabel";
+import { github, profile, projects, quotes, socials, type Quote as QuoteData } from "@/content";
+
+// A poet's line, set big. Its letters come flying in from all over the screen and lock into place as you
+// scroll (Motion.tsx); grouped by word so lines only break between words.
+function Quote({ quote }: { quote: QuoteData }) {
+  const words = `“${quote.text}”`.split(" ");
+  return (
+    <figure className="quote">
+      <blockquote className="quote-text" aria-label={quote.text}>
+        {words.map((word, w) => (
+          <span key={w} className="qw" aria-hidden>
+            {Array.from(word).map((c, i) => (
+              <span key={i} className="qc">
+                {c}
+              </span>
+            ))}
+            {w < words.length - 1 ? " " : null}
+          </span>
+        ))}
+      </blockquote>
+      <figcaption className="quote-by">
+        <span className="quote-poet">{quote.by}</span>
+        <cite>{quote.work}</cite>
+      </figcaption>
+    </figure>
+  );
+}
 
 // Each word is its own element so it can light up as you scroll. "==words==" get a highlighter stroke.
 function Statement({ text }: { text: string }) {
@@ -38,7 +65,9 @@ function Chars({ text, className }: { text: string; className?: string }) {
         <span key={w} className="word" aria-hidden>
           {Array.from(word).map((c, i) => (
             <span key={i} className="char-mask">
-              <span className="char">{c}</span>
+              <span className="char" data-c={c}>
+                {c}
+              </span>
             </span>
           ))}
           {w < words.length - 1 ? " " : null}
@@ -48,60 +77,14 @@ function Chars({ text, className }: { text: string; className?: string }) {
   );
 }
 
-// What I do, as a Y2K music player: chrome buttons, and the words running across its little LCD screen
-// like a track title (speed and direction follow the scroll). It really plays: pause it, or skip a word
-// back / forward (see Motion.tsx).
-function Ticker() {
-  const items = [...marquee, ...marquee];
+// What I do: the heading, then a row per trade with its tools as Liquid Glass capsules (Stack.tsx).
+function Skills() {
   return (
-    <div className="ticker">
-      <span className="tk-controls">
-        <button type="button" className="tk-btn" data-tk="prev" aria-label="Back one word">
-          <svg viewBox="0 0 24 24" aria-hidden>
-            <path d="M6 5h2v14H6zM20 5v14l-10-7z" />
-          </svg>
-        </button>
-        <button type="button" className="tk-btn is-play" data-tk="play" aria-label="Pause the ticker">
-          <svg className="tk-pause" viewBox="0 0 24 24" aria-hidden>
-            <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
-          </svg>
-          <svg className="tk-play" viewBox="0 0 24 24" aria-hidden>
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </button>
-        <button type="button" className="tk-btn" data-tk="next" aria-label="Forward one word">
-          <svg viewBox="0 0 24 24" aria-hidden>
-            <path d="M16 5h2v14h-2zM4 5v14l10-7z" />
-          </svg>
-        </button>
-      </span>
-      <span className="tk-lcd" aria-hidden>
-        <span className="tk-label">
-          <span className="tk-on">Now playing</span>
-          <span className="tk-off">Paused</span>
-        </span>
-        <span className="ticker-window">
-          <span className="ticker-inner">
-            {[0, 1].map((copy) => (
-              <span className="ticker-chunk" key={copy}>
-                {items.map((m, i) => (
-                  <span key={i} className="ticker-word">
-                    {m}
-                    <svg viewBox="0 0 20 20">
-                      <path d="M10 0 Q11.6 8.4 20 10 Q11.6 11.6 10 20 Q8.4 11.6 0 10 Q8.4 8.4 10 0Z" />
-                    </svg>
-                  </span>
-                ))}
-              </span>
-            ))}
-          </span>
-        </span>
-      </span>
-      <span className="tk-eq" aria-hidden>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <i key={i} style={{ "--i": i } as React.CSSProperties} />
-        ))}
-      </span>
+    <div className="skills">
+      <h2 id="about-title" className="skills-heading">
+        <Chars text="What I do" />
+      </h2>
+      <Stack />
     </div>
   );
 }
@@ -161,20 +144,39 @@ export default function Home() {
           <RollText text={profile.handle} />
         </a>
         <nav className="nav-links">
-          <a href="#about" className="glass-pill">
+          <a href="#about" className="nav-pill">
             <RollText text="About" />
           </a>
-          <a href="#work" className="glass-pill">
+          <a href="#work" className="nav-pill">
             <RollText text="Work" />
           </a>
-          <a href="#contact" className="glass-pill">
+          <a href="#contact" className="nav-pill">
             <RollText text="Contact" />
           </a>
+          <ThemeToggle />
         </nav>
       </header>
 
       <main>
         <section id="top" className="hero" data-section="hero">
+          {/* The name, flat and big (the cat sits on its "o"). */}
+          <div className="hero-frame">
+            <h1 className="hero-title">
+              <span className="sr-only">
+                {profile.handle} — {profile.role}
+              </span>
+              <span className="hero-word" aria-hidden>
+                {Array.from(profile.handle).map((c, i) => (
+                  <span key={i} className="char-mask" data-perch={i === 3 ? "" : undefined}>
+                    <span className="char" data-c={c}>
+                      {c}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            </h1>
+            <p className="hero-role">{profile.role}</p>
+          </div>
           <div className="scroll-cue" aria-hidden>
             <span className="scroll-cue-text">
               {Array.from("Scroll to explore").map((c, i) => (
@@ -186,126 +188,17 @@ export default function Home() {
             </span>
             <span className="scroll-cue-line" />
           </div>
-          <h1 className="sr-only">
-            {profile.handle} — {profile.role}
-          </h1>
         </section>
 
-        {/* About: the statement, then night falls on a pinned sky where each ability is a constellation
-            of its tools (WebGL, see AboutSky), and day comes back after. */}
+        {/* About: the statement and a line of mine, then what I do: one row per ability with its tools. */}
         <section id="about" className="about" data-section="intro" aria-labelledby="about-title">
-          <h2 id="about-title" className="sr-only">
-            About
-          </h2>
           <div className="about-intro">
             <Statement text={profile.statement} />
-            <p className="about-kicker">
-              <span>(About)</span>
-              <span>{profile.note}</span>
-            </p>
+            <p className="about-note">{profile.note}</p>
           </div>
-          <Ticker />
+          <Quote quote={quotes[0]} />
 
-          <div className="about-stage">
-            <div className="ab-meta" aria-hidden>
-              <span className="ab-name">
-                <span className="ab-name-strip">
-                  {abilities.map((a) => (
-                    <span key={a.id}>{a.figure}</span>
-                  ))}
-                </span>
-              </span>
-              <span className="ab-count">
-                <span className="ab-count-strip">
-                  {abilities.map((a, i) => (
-                    <span key={a.id}>{String(i + 1).padStart(2, "0")}</span>
-                  ))}
-                </span>
-              </span>
-              <span className="ab-of">/ {String(abilities.length).padStart(2, "0")}</span>
-            </div>
-            <ol className="ab-list">
-              {abilities.map((a) => (
-                <li key={a.id} className="ability">
-                  <h3 className="ab-title">
-                    <Chars text={a.title} />
-                  </h3>
-                  <p className="ab-line">{a.line}</p>
-                  {/* The tools are drawn as the constellation's stars; this list is for screen readers. */}
-                  <ul className="sr-only" aria-label={`${a.title}: tools`}>
-                    {a.tools.map((t) => (
-                      <li key={t}>{t}</li>
-                    ))}
-                  </ul>
-                  <p className="ab-proof">
-                    <span>Seen in</span>
-                    {a.proof.map((p) =>
-                      p.project ? (
-                        <a key={p.label} href={`#project-${p.project}`} data-goto={p.project}>
-                          {p.label}
-                        </a>
-                      ) : (
-                        <em key={p.label}>{p.label}</em>
-                      ),
-                    )}
-                  </p>
-                </li>
-              ))}
-            </ol>
-            {/* Every star is a tool: hover the star (or its name) for what it is, click to visit it. */}
-            <div className="sky-labels">
-              {FIGURES.flatMap((f, fi) =>
-                f.stars.map((st, si) => {
-                  if (!st.label) return null;
-                  const t = tech[st.label];
-                  return (
-                    <a
-                      key={`${fi}-${si}`}
-                      className={["sky-label", st.key ? "is-key" : "", st.lang ? "is-lang" : ""].filter(Boolean).join(" ")}
-                      data-fig={fi}
-                      data-star={si}
-                      href={t?.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      tabIndex={-1}
-                    >
-                      {/* Sits right on the star (moved every frame by AboutSky). */}
-                      <span className="sky-hit" />
-                      <span className="sky-name">
-                        {st.lang ? <i>&lt;/&gt;</i> : null}
-                        {st.label}
-                      </span>
-                      {t ? (
-                        <span className="sky-card">
-                          <span className="sky-card-bar">
-                            <i />
-                            <i />
-                            <i />
-                            <span className="sky-card-title">{st.label}</span>
-                          </span>
-                          <span className="sky-card-info">{t.info}</span>
-                          <span className="sky-card-url">
-                            <svg viewBox="0 0 16 16" aria-hidden>
-                              <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                            </svg>
-                            <span className="sky-type">
-                              {Array.from(t.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/.*$/, "")).map((c, ci) => (
-                                <span key={ci} style={{ "--i": ci } as React.CSSProperties}>
-                                  {c}
-                                </span>
-                              ))}
-                            </span>
-                            <span className="sky-go">↗</span>
-                          </span>
-                        </span>
-                      ) : null}
-                    </a>
-                  );
-                }),
-              )}
-            </div>
-          </div>
-
+          <Skills />
         </section>
 
 
@@ -334,6 +227,7 @@ export default function Home() {
                   <video
                     className="panel-img"
                     data-src={p.video}
+                    data-av1={p.av1}
                     poster={p.poster}
                     muted
                     loop
@@ -342,13 +236,13 @@ export default function Home() {
                     aria-label={`${p.title} preview`}
                     style={p.focus ? { objectPosition: p.focus } : undefined}
                   />
-                  <MediaFx links={p.links} />
+                  <MediaFx links={p.links} code={p.code} />
+                  {/* The name on a glass label in the corner (the real heading is below, for screen readers). */}
+                  <GlassLabel>{p.title}</GlassLabel>
                 </a>
                 <div className="panel-info">
                   <span className="panel-index">{String(i + 1).padStart(2, "0")}</span>
-                  <h3 className="panel-title">
-                    <Chars text={p.title} />
-                  </h3>
+                  <h3 className="panel-title sr-only">{p.title}</h3>
                   <p className="panel-desc">{p.description}</p>
                   <p className="panel-meta">{p.stack}</p>
                   <ProjectActions title={p.title} links={p.links} />
@@ -374,6 +268,10 @@ export default function Home() {
           </div>
         </section>
 
+        <div className="interlude">
+          <Quote quote={quotes[1]} />
+        </div>
+
         <section id="contact" className="contact" data-section="contact">
           <h2 className="sayhi" aria-label="Say hi">
             <Chars text="Say" />
@@ -398,25 +296,22 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          {/* The bubble garden: scroll past the links and there's a floor for the cat and the flowers. */}
+          {/* Open air above the meadow: the cat's playground at the end of the page. */}
           <div className="garden" aria-hidden />
-          {/* The floor of the whole page: a meadow (ground in Backdrop.tsx, blades in stage/Grass.tsx). */}
+          {/* The floor of the whole page: the foot of the green hill (drawn in Backdrop.tsx). */}
           <div className="ground">
             <footer className="footer">
-              <span>
-                © {new Date().getFullYear()} {profile.handle} · <Link href="/legal">Legal</Link> · <Link href="/privacy">Privacy</Link>
+              <span className="footer-links">
+                <span>© {new Date().getFullYear()} {profile.handle}</span>
+                <Link href="/legal">Legal</Link>
+                <Link href="/privacy">Privacy</Link>
               </span>
-              <PlaygroundHint />
               <span>
-                cat by{" "}
-                <a href="https://sketchfab.com/3d-models/chonky-cat-trio-d9a2d94179384803af7456d633283496" target="_blank" rel="noreferrer">
-                  Kanna-Nakajima
-                </a>
-                , iPod by{" "}
+                iPod by{" "}
                 <a href="https://sketchfab.com/3d-models/ipod-classic-13dbe30b0e45408c8bfaddfe6a4e8786" target="_blank" rel="noreferrer">
                   Timothy Ahene
                 </a>{" "}
-                · <Link href="/legal#credits">CC BY 4.0</Link>
+                (<Link href="/legal#credits">CC BY 4.0</Link>)
               </span>
             </footer>
           </div>

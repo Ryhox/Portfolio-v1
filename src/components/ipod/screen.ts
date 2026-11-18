@@ -7,8 +7,9 @@ import { GAMES, type Game, type Ui } from "./games";
 
 export const SW = 640;
 export const SH = 524;
-const HEAD = 72;
-const ROW_H = (SH - HEAD) / ROWS;
+// The title bar's height and a list row's, in screen pixels (also where taps on the screen land, IPodModel.tsx).
+export const HEAD = 72;
+export const ROW_H = (SH - HEAD) / ROWS;
 const INK = "#101216";
 const SOFT = "#4f5763";
 

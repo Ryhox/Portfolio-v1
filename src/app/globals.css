@@ -1,5 +1,12 @@
+/* 0 by day, 1 at night (dark mode): the ink follows, and eases over when the theme flips. */
+@property --night {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
 :root {
-  /* 0 by day, 1 at night (set from the scroll over the About section, see Motion.tsx): the ink follows. */
+  color-scheme: light;
   --night: 0;
   --ink-day: #0f2257;
   --ink-soft-day: #233d7a;
@@ -13,9 +20,8 @@
   --bg: #5ea8ef;
   --sky: linear-gradient(180deg, #2f7fe2 0%, #5ea8ef 55%, #a4d2f7 100%);
 
-  /* Y2K chrome: pearly silver with a holographic film (pink, cyan, gold, lavender) sliding over it, a
-     bright horizon band, a navy edge and a wet highlight. */
-  --chrome: linear-gradient(180deg, #ffffff 0%, #fbeef8 14%, #d9e6f6 38%, #a9b4d0 50%, #cfe9ef 64%, #f6ecd6 80%, #ffffff 100%);
+  /* Y2K chrome: icy silver, a bright horizon band, a navy edge and a wet highlight. */
+  --chrome: linear-gradient(180deg, #ffffff 0%, #eef6fd 14%, #d5e5f4 38%, #a7bbd2 50%, #cde3f3 64%, #eef6fd 82%, #ffffff 100%);
   /* Chrome lettering: pale sky reflected on top, a hard dark horizon, an iridescent ground below. */
   --chrome-text: linear-gradient(
     180deg,
@@ -25,26 +31,37 @@
     #f4fbff 48.5%,
     #34427a 49.5%,
     #6a6fb8 55%,
-    #d99be0 68%,
-    #ffd6a6 82%,
-    #fff7ea 96%
+    #9fcdf5 68%,
+    #dcefff 82%,
+    #f7fbff 96%
   );
   --chrome-edge: #26396e;
-  /* Pearl, for the headlines: pink, white and baby-blue streaks across each letter. */
-  --pearl: linear-gradient(100deg, #ffffff 0%, #ffc4ec 15%, #ffffff 29%, #c2e0ff 43%, #efc8ff 57%, #ffffff 69%, #b4d6ff 84%, #ffd6f2 100%);
+  /* Ice, for the headlines: white with pale-blue streaks across each letter. */
+  --pearl: linear-gradient(100deg, #ffffff 0%, #d6edff 15%, #ffffff 29%, #bfe1ff 43%, #e8f5ff 57%, #ffffff 69%, #b3dbff 84%, #e6f4ff 100%);
   --chrome-ring:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     inset 0 -3px 6px rgba(60, 80, 125, 0.28),
     0 0 0 1px rgba(64, 82, 124, 0.55),
     0 0 0 3px rgba(255, 255, 255, 0.55),
     0 10px 22px -10px rgba(18, 42, 100, 0.55);
-  --peri: linear-gradient(180deg, #e3e5ff 0%, #aeb3f7 38%, #7a82e6 54%, #949bf0 78%, #c9ccff 100%);
+  /* Ice-blue candy, for the primary buttons (white lettering). */
+  --peri: linear-gradient(180deg, #dcefff 0%, #86c2f6 38%, #3f8ee6 54%, #5aa3ee 78%, #bfe0fc 100%);
   --gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.08));
-  --accent: #6d74e4;
-  --pink: #f590d0;
-  --gold: #ffc93c;
+  --accent: #2f7fe2;
+  --ice: #9ed2ff;
   --gutter: clamp(20px, 5vw, 96px);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --night: 1;
+  --bg: #050b1f;
+  --sky: linear-gradient(180deg, #030716 0%, #0a1638 55%, #13285a 100%);
+}
+
+html {
+  transition: --night 0.9s ease;
 }
 
 * {
@@ -67,8 +84,10 @@ html {
   text-rendering: optimizeLegibility;
 }
 
+/* (The CSS sky lives on the fixed .scene layer, under the WebGL one. As a fixed background here it made the
+   browser repaint the whole page on every frame of scrolling.) */
 body {
-  background: var(--sky) fixed;
+  background: var(--bg);
   min-height: 100vh;
   overflow-x: clip;
 }
@@ -101,28 +120,62 @@ img {
 
 /* ---------- Y2K chrome, shared ---------- */
 
-/* Y2K headlines, like a chrome logo: blocky Bungee filled with pearl (a soft white shine on top), a pink
-   rim, a stepped purple 3D extrusion and a soft cast shadow, so they pop on the day sky and at night.
-   Rim and extrusion are drop-shadows (a text stroke would trace the font's inner contours).
+/* Y2K headlines, like a chrome logo: blocky Bungee filled with ice (a soft white shine on top), a blue
+   rim, a stepped blue 3D extrusion and a soft cast shadow, so they pop on the day sky and at night.
+   Two copies of each letter: the letter itself is the back one, rim-blue, carrying the rim, the three
+   extrusion steps and the cast shadow as text shadows; an exact copy on top (::after, from data-c) is the
+   ice fill. Text shadows are painted once and then only moved; the drop-shadow filters this used to be
+   were redrawn by the GPU every frame and were the heaviest thing on the page.
    (Each .char gets vertical room so the fill covers the whole glyph; the negative margin keeps the
    layout exactly as it was.) */
-.ab-title .char,
+.hero-title .char,
+.loader-num .char,
+.skills-heading .char,
+.st-title .char,
 .work-heading .char,
 .more-title .char,
 .sayhi .char,
 .nf-code {
+  position: relative;
   padding-block: 0.14em;
   margin-block: -0.14em;
+  color: #2a63c4;
+  text-shadow:
+    0 0 0.7px #2a63c4,
+    0 0 0.6px #2a63c4,
+    0 0.024em 0 #bfe0ff,
+    0 0.048em 0 #5b9be6,
+    0 0.072em 0 #24539f,
+    0 0.19em 0.14em rgba(8, 26, 76, 0.42);
+}
+
+.hero-title .char::after,
+.loader-num .char::after,
+.skills-heading .char::after,
+.st-title .char::after,
+.work-heading .char::after,
+.more-title .char::after,
+.sayhi .char::after,
+.nf-code::after {
+  content: attr(data-c);
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  white-space: pre;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 44%, rgba(120, 50, 160, 0.16) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 44%, rgba(30, 80, 160, 0.14) 100%),
     var(--pearl);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   text-shadow: none;
+  pointer-events: none;
 }
 
-.ab-title,
+.hero-title,
+.loader-num,
+.skills-heading,
+.st-title,
 .work-heading,
 .more-title,
 .sayhi,
@@ -131,8 +184,6 @@ img {
   font-weight: 400;
   font-synthesis: none;
   letter-spacing: 0.01em;
-  filter: drop-shadow(0 0 0.7px #c24fc8) drop-shadow(0 0 0.6px #c24fc8) drop-shadow(0 0.024em 0 #e7a3ec)
-    drop-shadow(0 0.024em 0 #a84dc0) drop-shadow(0 0.024em 0 #6a2b8e) drop-shadow(0 0.12em 0.14em rgba(38, 18, 84, 0.42));
 }
 
 /* A chrome capsule button with a wet highlight across its top half. */
@@ -168,11 +219,7 @@ img {
 
 @media (hover: hover) {
   .chrome-pill:hover {
-    filter: brightness(1.04) saturate(1.1);
-    box-shadow:
-      var(--chrome-ring),
-      0 0 0 5px rgba(255, 255, 255, 0.35),
-      0 12px 30px -8px rgba(90, 100, 230, 0.55);
+    filter: brightness(1.05);
   }
 }
 
@@ -183,6 +230,8 @@ img {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  /* The sky in CSS until the WebGL sky has drawn its first frame. */
+  background: var(--sky);
 }
 
 main {
@@ -190,71 +239,47 @@ main {
   z-index: 1;
 }
 
-/* The page's sky, so the WebGL curtain (IntroFX) that the bubbles pop through matches it pixel for pixel. */
+/* The loader: the page's sky, and the count in the name's chrome letters, big in the middle. At 100 the
+   number rises out of its mask (the same move the name makes coming in) and the loader fades into the sky
+   behind it (Experience.tsx). */
 .loader {
   position: fixed;
   inset: 0;
   z-index: 100;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1.4rem;
+  overflow: hidden;
   background: var(--sky);
-
-  display: flex;
-  align-items: flex-end;
-  padding: 0 var(--gutter) 3vh;
   pointer-events: none;
 }
 
-/* Bubbly counter: puffy silver digits with a glossy top highlight. */
-.loader {
-  overflow: hidden;
-}
-
-.loader-count {
-  position: relative;
-  display: flex;
-  font-family: var(--font-bubble), sans-serif;
-  font-weight: 700;
-  font-size: clamp(6.5rem, 22vw, 21rem);
-  line-height: 1.08;
-  letter-spacing: -0.01em;
-  padding: 0.12em 0.06em 0.02em;
+.loader-num {
+  font-size: clamp(5rem, 17vw, 13rem);
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.loader-digit {
-  position: relative;
+.loader-num .char-mask {
   display: inline-block;
-  transform-origin: 50% 85%;
-  color: #eef2f9;
-  text-shadow:
-    0 0.025em 0 #a9b5cc,
-    0 0.05em 0 #6f7e9f,
-    0 0.1em 0.14em rgba(8, 26, 76, 0.45);
-  will-change: transform;
+  overflow: hidden;
+  padding-inline: 0.06em;
 }
 
-/* Glossy "wet" highlight: the same glyph, white fading out halfway down. */
-.loader-digit::after {
-  content: attr(data-d);
-  text-shadow: none;
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 30%, rgba(255, 255, 255, 0) 46%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: none;
-  pointer-events: none;
+.loader-num .char {
+  display: inline-block;
 }
 
-.loader-pct {
-  align-self: flex-start;
-  margin: 0.2em 0 0 0.06em;
-  font-size: 0.34em;
-  color: #eef2f9;
-  opacity: 0.9;
+.loader-sub {
+  font-family: var(--font-ui), sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.8rem, 1.2vw, 0.95rem);
+  letter-spacing: 0.2em;
+  color: var(--ink-soft);
 }
 
-/* ---------- Stage (cat layer above the page) + bubble wand ---------- */
+/* ---------- Stage (the cat's layer above the page) ---------- */
 
 .stage {
   position: fixed;
@@ -263,22 +288,12 @@ main {
   pointer-events: none;
 }
 
-html.wand-on .contact,
-html.wand-on .contact * {
-  cursor: none;
-}
-
-html.wand-on .contact a,
-html.wand-on .contact a * {
-  cursor: pointer;
-}
-
-/* Surfaces the cat stands on give way under its weight (animated from JS). */
-.statement .w,
-.char-mask,
-.ticker,
-.panel-media,
-.more-icon {
+/* Surfaces the cat stands on give way under its weight (animated from JS). Only while its stage is on: on
+   every letter and picture all the time, it was ~140 extra moving parts for the browser to track each frame. */
+.stage-on .statement .w,
+.stage-on .char-mask,
+.stage-on .panel-media,
+.stage-on .more-icon {
   translate: 0 var(--dip, 0px);
 }
 
@@ -368,8 +383,8 @@ html.wand-on .contact a * {
   letter-spacing: 0.08em;
 }
 
-/* Glossy aqua glass capsule: see-through blue, a white rim, a wet highlight, dark blue lettering. */
-.glass-pill {
+/* Small icy chrome capsules: solid, a wet highlight across the top, dark blue lettering. */
+.nav-pill {
   position: relative;
   isolation: isolate;
   display: inline-flex;
@@ -378,48 +393,155 @@ html.wand-on .contact a * {
   height: 2.5rem;
   padding: 0 1.35rem;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(222, 240, 255, 0.75) 0%, rgba(140, 196, 246, 0.6) 48%, rgba(96, 164, 236, 0.72) 52%, rgba(170, 214, 252, 0.85) 100%);
-  box-shadow:
-    inset 0 0 0 1.5px rgba(255, 255, 255, 0.95),
-    inset 0 -3px 8px rgba(255, 255, 255, 0.55),
-    0 3px 8px -2px rgba(24, 64, 140, 0.4);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: var(--chrome);
+  box-shadow: var(--chrome-ring);
   color: var(--ink-day);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
-  transition:
-    box-shadow 0.4s var(--ease-out),
-    filter 0.4s var(--ease-out);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: filter 0.4s var(--ease-out);
 }
 
-.glass-pill::after {
+.nav-pill::after {
   content: "";
   position: absolute;
   z-index: -1;
-  left: 7%;
-  right: 7%;
+  left: 8%;
+  right: 8%;
   top: 2px;
-  height: 48%;
+  height: 46%;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.15));
+  background: var(--gloss);
+  opacity: 0.8;
   pointer-events: none;
 }
 
 @media (hover: hover) {
-  .glass-pill:hover {
-    filter: brightness(1.08) saturate(1.2);
-    box-shadow:
-      inset 0 0 0 1.5px #fff,
-      inset 0 -3px 8px rgba(255, 255, 255, 0.6),
-      0 0 0 4px rgba(255, 255, 255, 0.35),
-      0 6px 18px -4px rgba(40, 110, 230, 0.6);
+  .nav-pill:hover {
+    filter: brightness(1.05);
   }
+}
+
+.nav-pill:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* Day / night: a slide switch in the same chrome. */
+.theme-switch {
+  --w: 4.4rem;
+  --k: 1.75rem;
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  width: var(--w);
+  padding: 0 5px;
+  font: inherit;
+}
+
+.ts-track {
+  position: relative;
+  width: 100%;
+  height: var(--k);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #9fb4cc 0%, #d6e4f2 100%);
+  box-shadow: inset 0 1px 3px rgba(16, 36, 80, 0.5);
+}
+
+:root[data-theme="dark"] .ts-track {
+  background: linear-gradient(180deg, #0c1a3c 0%, #24406f 100%);
+}
+
+.ts-knob {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: calc(var(--k) - 4px);
+  height: calc(var(--k) - 4px);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffffff 0%, #e6eef7 50%, #b9c9dc 100%);
+  box-shadow:
+    0 1px 2px rgba(10, 30, 70, 0.5),
+    inset 0 1px 0 #fff;
+  color: var(--ink-day);
+  transition: transform 0.7s var(--ease-out);
+}
+
+:root[data-theme="dark"] .ts-knob {
+  transform: translateX(calc(var(--w) - 10px - var(--k)));
+}
+
+.ts-knob svg {
+  position: absolute;
+  width: 64%;
+  height: 64%;
+  transition:
+    opacity 0.35s ease,
+    transform 0.6s var(--ease-out);
+}
+
+.ts-sun {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.ts-moon {
+  fill: currentColor;
+  opacity: 0;
+  transform: rotate(-60deg) scale(0.6);
+}
+
+:root[data-theme="dark"] .ts-sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+
+:root[data-theme="dark"] .ts-moon {
+  opacity: 1;
+  transform: none;
 }
 
 /* ---------- Hero ---------- */
 
 .hero {
   height: 150svh;
+}
+
+/* The name holds the screen for a moment, then scrolls away (the cat sits on its "o"). */
+/* (Its own layer, so sticking while you scroll is the compositor's job, not a repaint each frame.) */
+.hero-frame {
+  will-change: transform;
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--gutter);
+  text-align: center;
+}
+
+.hero-title {
+  font-size: clamp(5rem, 21vw, 22rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.hero-word {
+  display: inline-flex;
+}
+
+.hero-role {
+  margin-top: clamp(1rem, 3svh, 2rem);
+  font-family: var(--font-ui), sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.78rem, 1.05vw, 1rem);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ink);
 }
 
 /* Scroll cue: small caps whose letters roll over in a wave, over a hairline that fills and empties. */
@@ -443,7 +565,7 @@ html.wand-on .contact a * {
   transition-delay: 1.6s;
 }
 
-/* Scrolling fades the cue instantly (no transition on the children). */
+/* Scrolling fades the cue instantly (no transition on the children; --scrolled is set on the cue itself). */
 .scroll-cue > * {
   opacity: calc(1 - var(--scrolled, 0));
 }
@@ -500,177 +622,306 @@ html.wand-on .contact a * {
   animation: cue-line 3.2s cubic-bezier(0.76, 0, 0.24, 1) infinite;
 }
 
+/* Draws in from the left, then drains out to the right. (Transform only: animating transform-origin ran the
+   page's styles again every frame, forever.) */
 @keyframes cue-line {
   0% {
-    transform: scaleX(0);
-    transform-origin: left center;
+    transform: translateX(0) scaleX(0);
   }
   45% {
-    transform: scaleX(1);
-    transform-origin: left center;
-  }
-  45.01% {
-    transform-origin: right center;
+    transform: translateX(0) scaleX(1);
   }
   90%,
   100% {
-    transform: scaleX(0);
-    transform-origin: right center;
+    transform: translateX(100%) scaleX(0);
   }
 }
 
-/* ---------- About: statement → pinned constellation stage (night) ---------- */
-/* (The sky is WebGL, see AboutSky.tsx + Backdrop.tsx; choreography in Motion.tsx.) */
+/* Once you've scrolled, the cue is gone: stop its loops too. */
+.scroll-cue.is-gone .cue-char > span,
+.scroll-cue.is-gone .scroll-cue-line::after {
+  animation: none;
+}
+
+/* ---------- About: the statement, a quote, what I do ---------- */
 
 .about {
   position: relative;
 }
 
 .about-intro {
-  padding: 14svh var(--gutter) 16svh;
+  padding: 14svh var(--gutter) 6svh;
 }
 
-.about-intro + .ticker {
-  margin-bottom: 18svh;
-}
-
-.about-kicker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.4rem;
-  margin: 8svh 0 0 auto;
-  max-width: 26rem;
-  font-family: var(--font-ui), sans-serif;
-  font-weight: 700;
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  line-height: 1.6;
-  text-transform: uppercase;
+.about-note {
+  margin: 7svh 0 0 auto;
+  max-width: 22rem;
+  font-size: clamp(1.05rem, 1.3vw, 1.25rem);
+  font-weight: 600;
+  line-height: 1.5;
   color: var(--ink-soft);
 }
 
-.about-kicker span:first-child {
+/* A poet's line, set big in the statement's heavy face. The first sits right after the statement, the second
+   just before contact. Its letters fly in from all over the screen (Motion.tsx), so they need room in 3D. */
+.quote {
+  padding: 16svh var(--gutter);
+}
+
+.quote-text {
+  max-width: 16ch;
+  margin-left: auto;
+  font-family: var(--font-sans), sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.3rem, 5.8vw, 6.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-align: right;
   color: var(--ink);
-}
-
-.about-stage {
-  position: relative;
-  height: 100svh;
-}
-
-.ab-meta {
-  position: absolute;
-  right: var(--gutter);
-  top: 13svh;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  font-family: var(--font-ui), sans-serif;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  opacity: 0;
-  transform: translateY(-12px);
-  transition:
-    opacity 0.6s ease,
-    transform 0.9s var(--ease-out);
-}
-
-/* It shows up with the first constellation (Motion.tsx toggles .is-on). */
-.ab-meta.is-on {
-  opacity: 1;
-  transform: none;
-}
-
-/* The figure's name, in a small chrome capsule that rolls with the count. */
-.ab-name {
-  display: inline-block;
-  height: 2rem;
-  padding: 0 0.95rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--chrome);
-  box-shadow: var(--chrome-ring);
-  color: var(--ink-day);
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  line-height: 2rem;
-}
-
-.ab-name-strip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  will-change: transform;
-}
-
-.ab-count {
-  display: inline-block;
-  height: 1.1em;
-  line-height: 1.1;
-  overflow: hidden;
-  font-size: 2.6rem;
-  letter-spacing: -0.04em;
-}
-
-.ab-count-strip {
-  display: flex;
-  flex-direction: column;
-  will-change: transform;
-}
-
-.ab-of {
-  font-size: 0.95rem;
-  color: var(--ink-soft);
-}
-
-.ab-list {
-  list-style: none;
-  position: absolute;
-  left: var(--gutter);
-  bottom: 13svh;
-  width: min(46vw, 44rem);
-}
-
-.ability {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  visibility: hidden;
-}
-
-.ability.is-on {
-  visibility: visible;
-}
-
-.ab-title {
-  margin-top: 0;
-  font-size: clamp(2.8rem, 5.4vw, 6.6rem);
-  line-height: 0.98;
-  text-transform: uppercase;
   perspective: 900px;
 }
 
-.ab-title .char {
-  transform-origin: 50% 100%;
+.qw {
+  display: inline-block;
+  /* pre, not nowrap: the space after each word lives inside its box. */
+  white-space: pre;
+  transform-style: preserve-3d;
 }
 
-.ab-line {
-  margin-top: 1.8rem;
-  max-width: 32rem;
-  font-size: 1.1rem;
-  font-weight: 500;
-  line-height: 1.6;
+/* (Each letter keeps its own layer for good: letting them come and go as they fly made the browser rebuild
+   its whole layer list every frame. No filter in here: they don't blur any more.) */
+.qc {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+.quote-by {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.3rem 0.9rem;
+  margin-top: 2.2rem;
   color: var(--ink-soft);
+}
+
+.quote-poet {
+  font-family: var(--font-ui), sans-serif;
+  font-weight: 800;
+  font-size: 0.86rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.quote-poet::before {
+  content: "— ";
+}
+
+.quote-by cite {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.interlude .quote {
+  padding: 18svh var(--gutter) 8svh;
+}
+
+.interlude .quote-text {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.interlude .quote-by {
+  justify-content: center;
+}
+
+/* What I do: the heading, then a row per trade, its tools as Liquid Glass capsules (Stack.tsx). */
+/* (The deep bottom padding is open sky: the flight through the clouds into the work happens there, after
+   the last row has had its moment, CloudPass.tsx.) */
+.skills {
+  padding: 14svh var(--gutter) 86svh;
+}
+
+.skills-heading {
+  font-size: clamp(3.2rem, 8.6vw, 9.6rem);
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+.st-rows {
+  list-style: none;
+  margin-top: 9svh;
+}
+
+.st-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: 1.6rem clamp(2rem, 5vw, 6rem);
+  padding: clamp(2.2rem, 5svh, 3.6rem) 0;
+}
+
+/* A hairline across the top of each row (and one under the last), drawn in with the scroll. */
+/* (Everything the scroll animates here is on its own layer, so each frame of it is a move, not a repaint.) */
+.st-rule,
+.st-line,
+.ab-proof,
+.cap {
+  will-change: transform, opacity;
+}
+
+.st-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--ink), transparent 80%);
+  transform-origin: left center;
+}
+
+.st-end {
+  position: relative;
+  height: 2px;
+}
+
+.st-title {
+  font-size: clamp(1.8rem, 3.5vw, 3.6rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* Masks for the title's letters (they rise out of them). */
+.st-title .char-mask {
+  display: inline-block;
+  overflow: hidden;
+  padding-block: 0.16em;
+  margin-block: -0.16em;
+  vertical-align: top;
+}
+
+.st-title .char {
+  display: inline-block;
+}
+
+.st-line {
+  max-width: 32rem;
+  min-height: 3em;
+  margin-top: 1rem;
+  overflow: hidden;
+  font-size: clamp(1rem, 1.2vw, 1.12rem);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.st-line-in {
+  display: block;
+}
+
+.st-caps {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 14px;
+}
+
+.cap {
+  display: block;
+}
+
+/* A tool: a Liquid Glass capsule. All of the glass (frost, bending, the rim and its sheen) is drawn by the sky
+   right under it (Backdrop.tsx); the capsule itself only adds its shadow, then its icon (an app icon, white so
+   every logo reads in both themes) and its name. */
+.glass-cap {
+  position: relative;
+  display: inline-flex;
+  border-radius: 999px;
+  color: var(--ink);
+  text-shadow: none;
+  transform-origin: center;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+  /* Only a soft shadow underneath (nothing round the edge, which would read as an outline). */
+  box-shadow: 0 18px 30px -20px rgb(4 24 70 / calc(0.45 + var(--night) * 0.3));
+}
+
+.glass-cap:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 5px;
+}
+
+.cap-body {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 62px;
+  padding: 0 26px 0 10px;
+  white-space: nowrap;
+}
+
+.cap-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 12px;
+  background: linear-gradient(165deg, #ffffff 0%, #f1f6fc 55%, #dfe9f5 100%);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(12 44 100 / 0.12),
+    0 1px 2px rgb(4 24 70 / 0.22);
+}
+
+.cap-icon img {
+  width: 64%;
+  height: 64%;
+  object-fit: contain;
+}
+
+.cap-name {
+  font-family: var(--font-sans), sans-serif;
+  font-weight: 800;
+  font-size: 1.04rem;
+  letter-spacing: -0.012em;
+  white-space: nowrap;
+}
+
+/* The flight through the clouds between About and the work (CloudPass.tsx). */
+.cloud-pass {
+  position: fixed;
+  inset: 0;
+  z-index: 16;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* The gallery's heading forming in the mist, over the clouds, placed exactly over the real one. */
+.cloud-title {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 17;
+  margin: 0;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform;
 }
 
 .ab-proof {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem 0.9rem;
-  margin-top: 1.3rem;
+  margin-top: 0.6rem;
   font-size: 0.95rem;
   color: var(--ink-faint);
 }
@@ -686,254 +937,12 @@ html.wand-on .contact a * {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 0.24em;
-  text-decoration-color: rgba(255, 201, 60, 0.7);
+  text-decoration-color: color-mix(in oklab, var(--ice), transparent 20%);
   transition: text-decoration-color 0.3s ease;
 }
 
 .ab-proof a:hover {
-  text-decoration-color: var(--gold);
-}
-
-/* Tool names riding next to their stars (positioned every frame by AboutSky). */
-.sky-labels {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.sky-label {
-  position: absolute;
-  left: 0;
-  top: 0;
-  padding: 0.34em 0.7em 0.36em;
-  border-radius: 999px;
-  background: rgba(14, 26, 66, 0.55);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.22);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  opacity: 0;
-  pointer-events: none;
-  cursor: pointer;
-  font-family: var(--font-ui), sans-serif;
-  font-weight: 700;
-  font-size: 0.74rem;
-  letter-spacing: 0.06em;
-  line-height: 1.2;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: #f4f7ff;
-  will-change: transform, opacity;
-}
-
-.sky-label.is-key {
-  font-size: 1.02rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  text-transform: none;
-}
-
-.sky-label i {
-  margin-right: 0.4em;
-  font-style: normal;
-  font-family: var(--font-sans), monospace;
-  font-weight: 800;
-  letter-spacing: 0;
-  color: var(--gold);
-}
-
-.sky-label.is-hot,
-.sky-label:hover {
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--ink-day);
-}
-
-/* Only a lit star can be hovered / clicked (AboutSky toggles .is-live). */
-.sky-label.is-live {
-  pointer-events: auto;
-}
-
-.sky-name {
-  position: relative;
-  transition: color 0.3s ease;
-}
-
-/* The star itself: a round target sitting right on it, with a ring that snaps on when you're there. */
-.sky-hit {
-  position: absolute;
-  left: -24px;
-  top: -24px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-}
-
-.sky-hit::before {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1.5px rgba(255, 255, 255, 0.9),
-    0 0 16px rgba(190, 215, 255, 0.8);
-  opacity: 0;
-  transform: scale(0.4);
-  transition:
-    opacity 0.2s ease,
-    transform 0.45s var(--ease-out);
-}
-
-.sky-label.is-hot .sky-hit::before,
-.sky-label:hover .sky-hit::before {
-  opacity: 1;
-  transform: none;
-  animation: sky-ring 1.6s ease-in-out 0.45s infinite;
-}
-
-@keyframes sky-ring {
-  50% {
-    transform: scale(1.18);
-    opacity: 0.6;
-  }
-}
-
-/* The hover card: a little Y2K browser window. A chrome title bar, what the tool is, and its address
-   typing itself into the URL field. */
-.sky-card {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 0.6rem);
-  width: 18rem;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 16px;
-  background: rgba(246, 250, 255, 0.94);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 0 0 1px rgba(64, 82, 124, 0.45),
-    0 0 0 3px rgba(255, 255, 255, 0.4),
-    0 22px 44px -18px rgba(0, 0, 0, 0.7);
-  font-family: var(--font-sans), sans-serif;
-  font-weight: 500;
-  font-size: 0.92rem;
-  letter-spacing: 0;
-  line-height: 1.45;
-  text-transform: none;
-  white-space: normal;
-  color: var(--ink-day);
-  text-shadow: none;
-  opacity: 0;
-  transform: translateY(6px) scale(0.97);
-  transform-origin: 0 0;
-  transition:
-    opacity 0.25s ease,
-    transform 0.45s var(--ease-out);
-  pointer-events: none;
-}
-
-.sky-card-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 2rem;
-  padding: 0 12px;
-  background: var(--chrome);
-  box-shadow: inset 0 -1px 0 rgba(64, 82, 124, 0.4);
-}
-
-.sky-card-bar > i {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #f590d0 45%, #d45fae);
-  box-shadow: 0 0 0 1px rgba(64, 82, 124, 0.35);
-}
-
-.sky-card-bar > i:nth-child(2) {
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #ffd35c 45%, #e0a51c);
-}
-
-.sky-card-bar > i:nth-child(3) {
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #7cc3ff 45%, #3f8fea);
-}
-
-.sky-card-title {
-  margin-left: 6px;
-  font-family: var(--font-ui), sans-serif;
-  font-weight: 800;
-  font-size: 0.66rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-day);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-.sky-card-info {
-  padding: 0.8rem 1rem 0.5rem;
-}
-
-.sky-card-url {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0 0.8rem 0.85rem;
-  height: 1.9rem;
-  padding: 0 0.75rem;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: inset 0 1px 3px rgba(40, 60, 110, 0.3), inset 0 0 0 1px rgba(64, 82, 124, 0.25);
-  font-family: var(--font-ui), sans-serif;
-  font-weight: 700;
-  font-size: 0.72rem;
-  letter-spacing: 0.03em;
-}
-
-.sky-card-url svg {
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-  color: var(--ink-faint-day);
-}
-
-.sky-type {
-  flex: 1;
-}
-
-.sky-type > span {
-  opacity: 0;
-}
-
-.sky-label:hover .sky-type > span,
-.sky-label:focus-visible .sky-type > span {
-  opacity: 1;
-  transition: opacity 0.05s calc(0.2s + var(--i) * 28ms);
-}
-
-.sky-go {
-  color: var(--accent);
-  font-size: 0.9rem;
-}
-
-.sky-label:hover .sky-card,
-.sky-label:focus-visible .sky-card {
-  opacity: 1;
-  transform: none;
-}
-
-.sky-label.is-flip .sky-card {
-  left: auto;
-  right: 0;
-  transform-origin: 100% 0;
-}
-
-.sky-label.is-up .sky-card {
-  top: auto;
-  bottom: calc(100% + 0.6rem);
-  transform-origin: 0 100%;
+  text-decoration-color: var(--ink);
 }
 
 .statement {
@@ -949,10 +958,10 @@ html.wand-on .contact a * {
 .statement .w {
   display: inline-block;
   white-space: pre;
-  will-change: opacity, transform, filter;
+  will-change: transform, opacity;
 }
 
-/* Highlighter: a glossy pastel stroke behind the words, drawn left→right as you read. */
+/* Highlighter: a glossy ice-blue stroke behind the words, drawn left→right as you read. */
 .statement .mark {
   position: relative;
   z-index: 0;
@@ -967,7 +976,7 @@ html.wand-on .contact a * {
   right: -0.02em;
   top: 0.3em;
   bottom: 0.12em;
-  background: linear-gradient(180deg, #ffe0f3, #ffb8e3 55%, #f7a0d8);
+  background: linear-gradient(180deg, #eef8ff, #c6e5ff 55%, #a9d7ff);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   opacity: 0.9;
   border-radius: 0.14em 0.3em 0.22em 0.12em;
@@ -975,206 +984,13 @@ html.wand-on .contact a * {
   transform-origin: left center;
 }
 
+:root[data-theme="dark"] .statement .mark::before {
+  background: linear-gradient(180deg, #2f62b4, #24519c 55%, #1d4588);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
 .statement .mark-end::before {
   right: 0.18em;
-}
-
-/* ---------- Ticker: what I do, as a Y2K music player ---------- */
-
-/* A chrome capsule (like the other chrome bars) holding round player buttons, an LCD screen the words run
-   across, and a little equaliser. */
-.ticker {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 var(--gutter);
-  padding: 7px 10px;
-  border-radius: 999px;
-  background: var(--chrome);
-  box-shadow: var(--chrome-ring);
-  text-shadow: none;
-  pointer-events: none;
-}
-
-.tk-controls {
-  display: flex;
-  gap: 6px;
-}
-
-.tk-btn {
-  appearance: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  pointer-events: auto;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--chrome);
-  box-shadow:
-    inset 0 1px 0 #fff,
-    inset 0 -2px 4px rgba(60, 80, 125, 0.3),
-    0 0 0 1px rgba(64, 82, 124, 0.5),
-    0 3px 6px -2px rgba(18, 42, 100, 0.4);
-  color: var(--ink-day);
-}
-
-.tk-btn.is-play {
-  width: 40px;
-  height: 40px;
-  background: var(--peri);
-  color: #fff;
-}
-
-.tk-btn svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
-}
-
-.tk-btn.is-play svg {
-  width: 17px;
-  height: 17px;
-  filter: drop-shadow(0 1px 1px rgba(40, 46, 140, 0.5));
-}
-
-.tk-btn .tk-play {
-  display: none;
-  margin-left: 2px;
-}
-
-.ticker.is-paused .tk-btn .tk-play {
-  display: block;
-}
-
-.ticker.is-paused .tk-btn .tk-pause {
-  display: none;
-}
-
-@media (hover: hover) {
-  .tk-btn:hover {
-    filter: brightness(1.08);
-  }
-}
-
-.tk-btn:focus-visible {
-  outline: 2px solid var(--ink-day);
-  outline-offset: 3px;
-}
-
-/* The screen: dark blue glass, glowing cyan type. */
-.tk-lcd {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-  height: 42px;
-  padding: 0 18px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #0a1638, #142a62 55%, #0f2250);
-  box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(120, 180, 255, 0.25),
-    0 1px 0 rgba(255, 255, 255, 0.8);
-  font-family: var(--font-ui), sans-serif;
-}
-
-.tk-label .tk-off,
-.ticker.is-paused .tk-label .tk-on {
-  display: none;
-}
-
-.ticker.is-paused .tk-label .tk-off {
-  display: inline;
-}
-
-.tk-label {
-  flex-shrink: 0;
-  font-weight: 700;
-  font-size: 0.6rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(150, 215, 255, 0.55);
-}
-
-.ticker-window {
-  flex: 1;
-  overflow: hidden;
-  -webkit-mask: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-  mask: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-}
-
-/* The equaliser bars bounce, out of step. */
-.tk-eq {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 26px;
-  padding-right: 8px;
-}
-
-.tk-eq i {
-  width: 4px;
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #ff9ad8, #9fa6f5 45%, #6cc4ff);
-  transform-origin: bottom;
-  animation: tk-eq 0.9s ease-in-out infinite alternate;
-  animation-delay: calc(var(--i) * -0.23s);
-}
-
-/* Paused: the bars sink and rest. */
-.ticker.is-paused .tk-eq i {
-  animation: none;
-  transform: scaleY(0.16);
-  transition: transform 0.4s var(--ease-out);
-}
-
-@keyframes tk-eq {
-  0% {
-    transform: scaleY(0.25);
-  }
-  50% {
-    transform: scaleY(0.9);
-  }
-  100% {
-    transform: scaleY(0.45);
-  }
-}
-
-.ticker-inner {
-  display: flex;
-  width: max-content;
-  will-change: transform;
-}
-
-.ticker-chunk {
-  display: flex;
-  flex-shrink: 0;
-}
-
-.ticker-word {
-  display: inline-flex;
-  align-items: center;
-  gap: 1.2rem;
-  padding-right: 1.2rem;
-  font-weight: 700;
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: #c4f0ff;
-  text-shadow: 0 0 8px rgba(110, 210, 255, 0.75);
-}
-
-.ticker-word svg {
-  width: 0.75rem;
-  height: 0.75rem;
-  fill: var(--gold);
-  filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.8));
 }
 
 /* ---------- Work: horizontal gallery ---------- */
@@ -1231,6 +1047,19 @@ html.wand-on .contact a * {
   margin: -0.24em -0.14em -0.18em;
 }
 
+/* Chrome letters cast their shadow inside their mask: room for it below (the margin keeps the layout). The
+   letters start their rise far enough down (150%) to be hidden by this deeper mask. */
+.hero-title .char-mask,
+.skills-heading .char-mask,
+.st-title .char-mask,
+.work-heading .char-mask,
+.more-title .char-mask,
+.sayhi .char-mask,
+.loader-num .char-mask {
+  padding-bottom: 0.5em;
+  margin-bottom: -0.5em;
+}
+
 .char {
   display: inline-block;
   will-change: transform;
@@ -1274,11 +1103,14 @@ html.wand-on .contact a * {
   pointer-events: none;
 }
 
+/* (Its own layer: it drifts with the scroll, and as part of the frame's paint the video was redrawn into it
+   every frame.) */
 .panel-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform-origin: center;
+  will-change: transform;
   transition: filter 0.6s ease;
 }
 
@@ -1293,13 +1125,12 @@ html.wand-on .contact a * {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-areas:
-    "index title"
-    ". desc"
+    "index desc"
     ". meta"
     ". actions";
   column-gap: 1.4rem;
   align-items: baseline;
-  margin-top: clamp(-1.8rem, -1.5vw, -1rem);
+  margin-top: 1.4rem;
   position: relative;
   z-index: 5;
 }
@@ -1313,18 +1144,65 @@ html.wand-on .contact a * {
   font-variant-numeric: tabular-nums;
 }
 
-/* Project names: the headline face in solid dark blue, lifted off the sky by a thin white edge. */
-.panel-title {
-  grid-area: title;
+/* The project's name, on a Liquid Glass label in the clip's bottom-left corner (GlassLabel.tsx, the same
+   glass library as the tech stack): white on the frosted, darkened clip, so it reads over any frame, day or night. */
+.panel-label {
+  position: absolute;
+  left: clamp(14px, 1.6vw, 24px);
+  bottom: clamp(14px, 1.6vw, 24px);
+  z-index: 5;
+  display: block;
+  border-radius: 999px;
+  /* Frosted clip, darkened a little so the white name reads over any frame; a soft light across the top of
+     the dome. */
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0) 60%),
+    rgb(8 18 44 / 0.24);
+  -webkit-backdrop-filter: blur(10px) saturate(1.35);
+  backdrop-filter: blur(10px) saturate(1.35);
+  box-shadow: 0 18px 30px -20px rgb(2 10 30 / 0.55);
+  pointer-events: none;
+}
+
+/* The sheen: a thin band inside the rim, bright where it faces the light (up-left) and faintly opposite,
+   fading to nothing along the sides, so there's never a line all the way round. */
+.panel-label::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    rgb(255 255 255 / 0.8) 0%,
+    rgb(255 255 255 / 0.2) 18%,
+    rgb(255 255 255 / 0) 34% 70%,
+    rgb(255 255 255 / 0.16) 86%,
+    rgb(255 255 255 / 0.42) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+.panel-label-text {
+  display: block;
+  padding: 0.42em 0.95em 0.36em;
   font-family: var(--font-display), sans-serif;
   font-weight: 400;
   font-synthesis: none;
-  letter-spacing: 0.01em;
-  color: var(--ink-day);
-  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.55);
-  font-size: clamp(2rem, 4vw, 4.6rem);
+  font-size: clamp(1.1rem, 1.9vw, 2.1rem);
   line-height: 1;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
+  color: #fff;
+  text-shadow: none;
+  white-space: nowrap;
 }
 
 .panel-desc,
@@ -1355,8 +1233,7 @@ html.wand-on .contact a * {
 /* ---------- What the buttons do to the picture (driven from ActionFx.tsx) ---------- */
 
 .mfx-browser,
-.mfx-ascii,
-.mfx-repo,
+.mfx-code,
 .mfx-stamp {
   position: absolute;
   pointer-events: none;
@@ -1367,7 +1244,13 @@ html.wand-on .contact a * {
   z-index: 2;
 }
 
-/* Live demo: a chrome browser toolbar drops in and the real address types itself. */
+/* (Source code's bar sits over the decoding characters.) */
+.mfx-browser--code {
+  z-index: 3;
+}
+
+/* Live demo / Source code: a chrome browser toolbar drops in and the real address (the site, or the repo on
+   GitHub) types itself. */
 .mfx-bar {
   position: absolute;
   inset: 0 0 auto 0;
@@ -1384,29 +1267,15 @@ html.wand-on .contact a * {
   transition: transform 0.6s var(--ease-out);
 }
 
-.mfx-bar > i {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #f590d0 45%, #d45fae);
-  box-shadow: 0 0 0 1px rgba(64, 82, 124, 0.35);
-}
-
-.mfx-bar > i:nth-child(2) {
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #ffd35c 45%, #e0a51c);
-}
-
-.mfx-bar > i:nth-child(3) {
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #7cc3ff 45%, #3f8fea);
-}
-
 .mfx-url {
   display: flex;
   align-items: center;
   gap: 8px;
   height: 30px;
   min-width: 46%;
-  margin-left: 14px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
   padding: 0 14px;
   border-radius: 999px;
   background: #fff;
@@ -1424,15 +1293,26 @@ html.wand-on .contact a * {
   color: var(--ink-faint-day);
 }
 
-.mfx-type > span {
-  opacity: 0;
-  transition: opacity 0.05s;
+/* The address really types: each letter takes up its room the moment it's typed, so the caret right after it
+   moves along with the text (and isn't waiting at the far end before anything's there). */
+.mfx-type {
+  display: flex;
+  min-width: 0;
 }
 
+.mfx-type > span {
+  max-width: 0;
+  overflow: hidden;
+  white-space: pre;
+  transition: max-width 0s;
+}
+
+/* Sits right against the last letter (pulls back the row's gap), solid while typing, blinking once it's done. */
 .mfx-caret {
+  flex-shrink: 0;
   width: 1.5px;
-  height: 1em;
-  margin-left: 1px;
+  height: 1.05em;
+  margin-left: -7px;
   background: currentColor;
   opacity: 0;
 }
@@ -1443,26 +1323,33 @@ html.wand-on .contact a * {
   right: 0;
   top: 50px;
   height: 3px;
-  background: linear-gradient(90deg, #9fd6ff, #aeb3f7, #f7a8dc);
+  background: linear-gradient(90deg, #d6edff, #9ed2ff, #4c9cf0);
   transform: scaleX(0);
   transform-origin: left center;
   opacity: 0;
 }
 
-.panel.is-demo .mfx-bar {
+.panel.is-demo .mfx-browser--demo .mfx-bar,
+.panel.is-code .mfx-browser--code .mfx-bar {
   transform: none;
 }
 
-.panel.is-demo .mfx-browser .mfx-type > span {
+.panel.is-demo .mfx-browser--demo .mfx-type > span,
+.panel.is-code .mfx-browser--code .mfx-type > span {
+  max-width: 1.2em;
+  transition-delay: calc(0.32s + var(--i) * 26ms);
+}
+
+.panel.is-demo .mfx-browser--demo .mfx-caret,
+.panel.is-code .mfx-browser--code .mfx-caret {
   opacity: 1;
-  transition-delay: calc(0.28s + var(--i) * 34ms);
+  transition: opacity 0s 0.3s;
+  animation: mfx-caret 1s steps(1) infinite;
+  animation-delay: calc(0.6s + var(--n) * 26ms);
 }
 
-.panel.is-demo .mfx-browser .mfx-caret {
-  animation: mfx-caret 0.9s steps(1) infinite;
-}
-
-.panel.is-demo .mfx-load {
+.panel.is-demo .mfx-browser--demo .mfx-load,
+.panel.is-code .mfx-browser--code .mfx-load {
   opacity: 1;
   transform: scaleX(1);
   transition:
@@ -1484,47 +1371,13 @@ html.wand-on .contact a * {
   }
 }
 
-/* Source code: the picture decodes into characters (canvas), and the repo path types in. */
-.mfx-ascii {
+/* Source code: a few real lines of the project decode out of scrambled characters (canvas), under the
+   repo's address in the bar. */
+.mfx-code {
   inset: 0;
   z-index: 2;
   width: 100%;
   height: 100%;
-}
-
-.mfx-repo {
-  left: 20px;
-  bottom: 20px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  padding: 0.5em 0.9em;
-  border-radius: 999px;
-  background: rgba(10, 22, 58, 0.86);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: #eef2ff;
-  opacity: 0;
-  transform: translateY(8px);
-  transition:
-    opacity 0.3s ease,
-    transform 0.5s var(--ease-out);
-}
-
-.panel.is-code .mfx-repo {
-  opacity: 1;
-  transform: none;
-}
-
-.panel.is-code .mfx-repo .mfx-type > span {
-  opacity: 1;
-  transition-delay: calc(0.35s + var(--i) * 22ms);
-}
-
-.panel.is-code .mfx-repo .mfx-caret {
-  animation: mfx-caret 0.9s steps(1) infinite;
 }
 
 /* No live demo: stamped. */
@@ -1663,7 +1516,7 @@ html.wand-on .contact a * {
   --wet: var(--ink-day);
   background: var(--peri);
   color: #fff;
-  text-shadow: 0 1px 1px rgba(40, 46, 140, 0.55);
+  text-shadow: 0 1px 1px rgba(16, 52, 120, 0.55);
 }
 
 /* Source code: silver; floods to periwinkle. */
@@ -1819,7 +1672,7 @@ html.wand-on .contact a * {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 0.2em;
-  text-decoration-color: rgba(109, 116, 228, 0.6);
+  text-decoration-color: rgba(47, 127, 226, 0.6);
   transition: text-decoration-color 0.3s ease;
 }
 
@@ -1853,7 +1706,7 @@ html.wand-on .contact a * {
 .more-icon {
   width: clamp(130px, 22svh, 240px);
   height: clamp(130px, 22svh, 240px);
-  color: var(--ink-day);
+  color: var(--ink);
   filter: drop-shadow(0 10px 16px rgba(14, 34, 86, 0.3));
   transition: transform 0.8s var(--ease-out);
   will-change: transform;
@@ -1925,7 +1778,7 @@ html.wand-on .contact a * {
   letter-spacing: -0.01em;
 }
 
-/* Open air below the links for the cat, the wand and the flowers. */
+/* Open air below the links: the cat's playground. */
 .garden {
   width: 100%;
   flex: 1 1 auto;
@@ -1945,13 +1798,14 @@ html.wand-on .contact a * {
 .footer {
   position: relative;
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 1rem;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #0f2d18;
+  color: color-mix(in oklab, #0f2d18, #d4e6ea calc(var(--night) * 100%));
+  text-shadow: none;
 }
 
 /* Desktop: the iPod peeks up in the bottom-right corner; the credits stay clear of it. */
@@ -1961,24 +1815,15 @@ html.wand-on .contact a * {
   }
 }
 
-.footer > :first-child {
-  text-align: left;
-}
-
-.footer > :last-child {
-  text-align: right;
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
 }
 
 .footer a {
   text-decoration: underline;
   text-underline-offset: 0.2em;
-}
-
-.playground-hint {
-  font-size: 0.86rem;
-  font-weight: 700;
-  text-align: center;
-  min-height: 1.3em;
 }
 
 /* ---------- The iPod (components/IPod.tsx + ipod/) ---------- */
@@ -2027,7 +1872,7 @@ html.wand-on .contact a * {
 }
 
 .ipod:focus-visible .ipod-canvas {
-  filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 8px #fff);
+  filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff);
 }
 
 /* A little speech bubble when you hover the iPod in the corner. */
@@ -2121,6 +1966,189 @@ html.wand-on .contact a * {
     opacity: 0;
     transform: translateY(8px) scale(0.9);
   }
+}
+
+/* While a song plays: the mini player, a chrome capsule bottom-left (MiniPlayer.tsx). */
+.mini-player {
+  position: fixed;
+  left: max(20px, env(safe-area-inset-left, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(400px, calc(100vw - 40px));
+  height: 62px;
+  padding: 0 10px 0 11px;
+  overflow: hidden;
+  transform: translateY(150%);
+  transition: transform 0.6s var(--ease-out);
+  pointer-events: none;
+}
+
+.mini-player.is-on {
+  transform: none;
+  pointer-events: auto;
+}
+
+.mp-cover {
+  position: relative;
+  z-index: 4;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #cfe0f3;
+  box-shadow: 0 1px 2px rgba(4, 24, 70, 0.3);
+}
+
+.mp-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mp-text {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.mp-title,
+.mp-artist {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mp-title {
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-overflow: clip;
+}
+
+/* A title too long for its space scrolls through and back, resting at each end (MiniPlayer.tsx sets how far). */
+.mp-title-in {
+  display: inline-block;
+}
+
+.mp-title-in.is-long {
+  animation: mp-marquee var(--dur, 8s) ease-in-out infinite;
+}
+
+@keyframes mp-marquee {
+  0%,
+  18% {
+    transform: none;
+  }
+  50%,
+  68% {
+    transform: translateX(var(--over, 0px));
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.mp-artist {
+  font-size: 0.78rem;
+  color: var(--ink-faint-day);
+}
+
+.mp-btn {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(64, 82, 124, 0.25);
+  color: var(--ink-day);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mp-btn:hover {
+  background: #fff;
+}
+
+/* Stop and close: a small × on the capsule's top-left corner. */
+.mp-close {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(4, 24, 70, 0.35);
+  color: var(--ink-day);
+  cursor: pointer;
+}
+
+.mp-close svg {
+  width: 10px;
+  height: 10px;
+}
+
+.mp-close:focus-visible {
+  outline: 2px solid var(--ink-day);
+  outline-offset: 2px;
+}
+
+/* Back and next are a size down from play / pause. */
+.mp-btn--small {
+  width: 30px;
+  height: 30px;
+}
+
+.mp-btn--small svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mp-btn:focus-visible {
+  outline: 2px solid var(--ink-day);
+  outline-offset: 2px;
+}
+
+.mp-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.mp-line {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 5px;
+  z-index: 4;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(64, 82, 124, 0.18);
+  overflow: hidden;
+}
+
+.mp-line > span {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-day);
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
 }
 
 /* Phones: a chrome button in the corner; the iPod comes up in the middle of the screen. */
@@ -2220,10 +2248,20 @@ html.wand-on .contact a * {
   position: fixed;
   inset: 0;
   z-index: 39;
-  background: rgba(8, 18, 52, 0.42);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: rgba(8, 18, 52, 0.55);
   animation: ipod-fade 0.35s ease both;
+}
+
+@keyframes tk-eq {
+  0% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(0.9);
+  }
+  100% {
+    transform: scaleY(0.45);
+  }
 }
 
 @keyframes ipod-fade {
@@ -2282,7 +2320,7 @@ html.wand-on .contact a * {
   font-family: var(--font-display), sans-serif;
   font-size: 1.4rem;
   letter-spacing: 0.02em;
-  color: var(--ink-day);
+  color: var(--ink);
 }
 
 .legal-back {
@@ -2434,7 +2472,7 @@ html.wand-on .contact a * {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 0.2em;
-  text-decoration-color: rgba(109, 116, 228, 0.45);
+  text-decoration-color: rgba(47, 127, 226, 0.45);
   transition: text-decoration-color 0.3s ease;
 }
 
@@ -2453,7 +2491,7 @@ html.wand-on .contact a * {
 .folder-front code {
   padding: 0.1em 0.45em;
   border-radius: 6px;
-  background: rgba(109, 116, 228, 0.1);
+  background: rgba(47, 127, 226, 0.1);
   font-size: 0.88em;
   font-weight: 700;
   color: var(--ink-day);
@@ -2564,44 +2602,6 @@ html:has(.nf) body {
 /* ---------- Small screens: gallery stacks vertically ---------- */
 
 @media (max-width: 899px) {
-  /* The ticker: smaller buttons, no "Now playing" label, so the words have room to run. */
-  .ticker {
-    gap: 8px;
-    padding: 6px 8px;
-  }
-
-  .tk-controls {
-    gap: 4px;
-  }
-
-  .tk-btn {
-    width: 30px;
-    height: 30px;
-  }
-
-  .tk-btn.is-play {
-    width: 36px;
-    height: 36px;
-  }
-
-  .tk-lcd {
-    height: 38px;
-    padding: 0 12px;
-  }
-
-  .tk-label {
-    display: none;
-  }
-
-  .tk-eq {
-    height: 22px;
-    padding-right: 4px;
-  }
-
-  .ticker-word {
-    font-size: 0.72rem;
-  }
-
   /* "And much more": the GitHub mark and handle stack instead of running off the side. */
   .more-link {
     flex-wrap: wrap;
@@ -2616,19 +2616,6 @@ html:has(.nf) body {
     font-size: 1rem;
   }
 
-  /* The constellation labels, a size down. */
-  .sky-label {
-    font-size: 0.64rem;
-  }
-
-  .sky-label.is-key {
-    font-size: 0.86rem;
-  }
-
-  .sky-card {
-    width: min(16rem, 76vw);
-  }
-
   .nav-links {
     gap: 6px;
     font-size: 0.64rem;
@@ -2639,56 +2626,73 @@ html:has(.nf) body {
     padding: 0 0.75rem;
   }
 
+  .theme-switch {
+    --w: 3.7rem;
+    --k: 1.5rem;
+    height: 2.1rem;
+  }
+
   .hero {
-    height: 160svh;
+    height: 140svh;
   }
 
   .about-intro {
-    padding: 12svh var(--gutter) 26svh;
+    padding: 12svh var(--gutter) 4svh;
+  }
+
+  .quote {
+    padding: 10svh var(--gutter);
+  }
+
+  .quote-text {
+    font-size: 12vw;
+  }
+
+
+  .skills {
+    padding: 10svh var(--gutter) 70svh;
+  }
+
+  .skills-heading {
+    font-size: 12.5vw;
+  }
+
+  .st-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.3rem;
+  }
+
+  .st-title {
+    font-size: 8.4vw;
+  }
+
+  .st-line {
+    min-height: 0;
+    font-size: 0.98rem;
+  }
+
+  .st-caps {
+    gap: 10px;
+  }
+
+  .cap-body {
+    height: 54px;
+    gap: 10px;
+    padding: 0 20px 0 8px;
+  }
+
+  .cap-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .cap-name {
+    font-size: 0.96rem;
   }
 
   .about .statement {
     font-size: 10vw;
-  }
-
-  .about-kicker {
-    margin-top: 5svh;
-    font-size: 0.72rem;
-  }
-
-  .ab-meta {
-    top: 11svh;
-  }
-
-  .ab-name {
-    height: 1.7rem;
-    padding: 0 0.7rem;
-    font-size: 0.62rem;
-    line-height: 1.7rem;
-  }
-
-  .ab-count {
-    font-size: 1.6rem;
-  }
-
-  .ab-list {
-    right: var(--gutter);
-    width: auto;
-    bottom: 6svh;
-  }
-
-  .ab-title {
-    font-size: 9.6vw;
-  }
-
-  .ab-line {
-    margin-top: 1rem;
-    font-size: 0.98rem;
-  }
-
-  .ab-proof {
-    margin-top: 0.9rem;
-    font-size: 0.88rem;
   }
 
   .work {
@@ -2725,8 +2729,8 @@ html:has(.nf) body {
     font-size: 11vw;
   }
 
-  .panel-title {
-    font-size: clamp(1.7rem, 7.6vw, 3rem);
+  .panel-label-text {
+    font-size: clamp(0.95rem, 4.6vw, 1.5rem);
   }
 
   .panel-media {
@@ -2735,7 +2739,7 @@ html:has(.nf) body {
 
   .panel-info {
     grid-template-columns: 1fr;
-    grid-template-areas: "index" "title" "desc" "meta" "actions";
+    grid-template-areas: "index" "desc" "meta" "actions";
     margin-top: 1rem;
   }
 
@@ -2777,28 +2781,20 @@ html:has(.nf) body {
   }
 
   .footer {
-    grid-template-columns: 1fr;
-    justify-items: center;
+    flex-direction: column;
     gap: 0.3rem;
-  }
-
-  .footer > :first-child,
-  .footer > :last-child {
     text-align: center;
   }
 
-  .playground-hint {
-    order: -1;
+  .footer-links {
+    justify-content: center;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cue-char > span,
   .scroll-cue-line::after,
-  .tk-eq i,
-  .ipod-fab-eq i,
-  .sky-label.is-hot .sky-hit::before,
-  .sky-label:hover .sky-hit::before {
+  .ipod-fab-eq i {
     animation: none;
   }
 }

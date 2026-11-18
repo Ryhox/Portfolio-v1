@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Strict Mode's dev-only test unmount makes the Liquid Glass library (@samasante/liquid-glass) throw its
+  // WebGL context away, and the remount then gets a dead one ("WebGL renderer unavailable"). Production never
+  // does that double mount, so this only keeps dev honest to what ships.
+  reactStrictMode: false,
 };
 
 export default nextConfig;

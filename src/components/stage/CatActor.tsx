@@ -118,7 +118,6 @@ function makeBrain() {
     groom: 0,
     nextGroom: 8,
     pet: false,
-    nextHeart: 0,
     pounce: -1,
     wiggle: 0,
     jelly: 0,
@@ -146,9 +145,9 @@ export default function CatActor() {
     c.width = c.height = 128;
     const g = c.getContext("2d")!;
     const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-    grd.addColorStop(0, "rgba(30,16,60,0.6)");
-    grd.addColorStop(0.55, "rgba(30,16,60,0.25)");
-    grd.addColorStop(1, "rgba(30,16,60,0)");
+    grd.addColorStop(0, "rgba(12,28,70,0.6)");
+    grd.addColorStop(0.55, "rgba(12,28,70,0.25)");
+    grd.addColorStop(1, "rgba(12,28,70,0)");
     g.fillStyle = grd;
     g.fillRect(0, 0, 128, 128);
     const tex = new THREE.CanvasTexture(c);
@@ -986,9 +985,7 @@ export default function CatActor() {
       crouch = Math.min(1, b.pounce / 0.18);
       if (b.pounce > 0.55 || !grounded) {
         b.pounce = -1;
-        if (grounded && s && hopInPlace(s, Math.max(80, catH * 1.1))) {
-          stage.bursts.push({ x: b.x, y: b.y - catH * 1.05, r: catH * 0.45, hearts: true });
-        }
+        if (grounded && s) hopInPlace(s, Math.max(80, catH * 1.1));
       }
     }
     if (b.plan) {
@@ -1169,11 +1166,6 @@ export default function CatActor() {
     b.tail.amp = damp(b.tail.amp, tAmp, 5, dt);
     b.tail.speed = damp(b.tail.speed, tSpeed, 1.5, dt);
     b.tail.phase += b.tail.speed * dt;
-
-    if (b.pet && grounded && t > b.nextHeart) {
-      stage.bursts.push({ x: b.x + Math.sin(b.yaw) * catLen * 0.25, y: b.y - catH * 1.05, r: catH * 0.22, hearts: true });
-      b.nextHeart = t + rand(0.8, 1.3);
-    }
 
     // Body pitch: follow the ground under the paws (uneven letter tops), or the flight path.
     let pitch = 0;

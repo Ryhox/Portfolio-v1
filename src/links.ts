@@ -45,6 +45,10 @@ export const links = {
         href: "https://modrinth.com/mod/projectile.preview",
       },
     },
+    elsewhere: {
+      demo: "https://elsewhere.ryhox.dev",
+      source: "https://github.com/Ryhox/little-elsewhere",
+    },
   } satisfies Record<string, ProjectLinks>,
 } as const;
 

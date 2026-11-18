@@ -60,41 +60,46 @@ const typed = (text: string) =>
     </span>
   ));
 
+// A browser toolbar that drops in over the picture and types the address: the live site, or the repo.
+function Browser({ url, kind }: { url: string; kind: "demo" | "code" }) {
+  return (
+    <span className={`mfx-browser mfx-browser--${kind}`} aria-hidden>
+      <span className="mfx-bar">
+        <i />
+        <i />
+        <i />
+        {/* --n: how many letters, so the caret starts blinking once they're all typed. */}
+        <span className="mfx-url" style={{ "--n": url.length } as CSSProperties}>
+          <svg viewBox="0 0 16 16" aria-hidden>
+            <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+          </svg>
+          <span className="mfx-type">{typed(url)}</span>
+          <span className="mfx-caret" />
+        </span>
+      </span>
+      <span className="mfx-load" />
+    </span>
+  );
+}
+
 // What the buttons do to the project picture: "Live demo" turns it into a browser window loading the
-// real URL; "Source code" decodes the running video into characters (canvas, see ActionFx); no demo
-// gets stamped.
-export function MediaFx({ links }: { links: ProjectLinks }) {
+// real URL; "Source code" decodes a few real lines of the project's code out of scrambled characters
+// (canvas, see ActionFx) under a browser bar typing the repo's address on GitHub; no demo gets stamped.
+export function MediaFx({ links, code }: { links: ProjectLinks; code: { file: string; lines: string[] } }) {
   const host = links.demo ? links.demo.replace(/^https?:\/\//, "").replace(/\/$/, "") : "";
-  const repo = links.source.replace(/^https?:\/\//, "");
+  const repo = links.source.replace(/^https?:\/\//, "").replace(/\/$/, "");
   return (
     <>
       {host ? (
-        <span className="mfx-browser" aria-hidden>
-          <span className="mfx-bar">
-            <i />
-            <i />
-            <i />
-            <span className="mfx-url">
-              <svg viewBox="0 0 16 16" aria-hidden>
-                <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              </svg>
-              <span className="mfx-type">{typed(host)}</span>
-              <span className="mfx-caret" />
-            </span>
-          </span>
-          <span className="mfx-load" />
-        </span>
+        <Browser url={host} kind="demo" />
       ) : (
         <span className="mfx-stamp" aria-hidden>
           <span>No live demo</span>
           {links.elsewhere ? <small>{links.elsewhere.note}</small> : null}
         </span>
       )}
-      <canvas className="mfx-ascii" aria-hidden />
-      <span className="mfx-repo" aria-hidden>
-        <span className="mfx-type">{typed(repo)}</span>
-        <span className="mfx-caret" />
-      </span>
+      <canvas className="mfx-code" aria-hidden data-file={code.file} data-code={code.lines.join("\n")} />
+      <Browser url={repo} kind="code" />
     </>
   );
 }

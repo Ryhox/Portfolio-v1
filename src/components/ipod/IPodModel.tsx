@@ -6,7 +6,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import * as ipod from "./os";
-import { draw, loadSiteFont, SH, SW } from "./screen";
+import { draw, HEAD, loadSiteFont, ROW_H, SH, SW } from "./screen";
 
 export const MODEL = "/models/ipod.glb";
 
@@ -217,9 +217,16 @@ export default function IPodModel({ open, onExpand, onLoaded }: { open: boolean;
       local.copy(ray.ray).applyMatrix4(inv);
       const t = (FRONT - local.origin.x) / local.direction.x;
       if (!Number.isFinite(t) || t < 0) return null;
-      const fx = -(local.origin.z + local.direction.z * t - WHEEL.z);
-      const fy = local.origin.y + local.direction.y * t - WHEEL.y;
-      return { fx, fy, zone: zoneAt(fx, fy), hold: onHold };
+      const z = local.origin.z + local.direction.z * t;
+      const y = local.origin.y + local.direction.y * t;
+      const fx = -(z - WHEEL.z);
+      const fy = y - WHEEL.y;
+      // On the glass: where on the screen's own pixels (its left edge is the face's right-hand z).
+      const screen =
+        z >= GLASS.z0 && z <= GLASS.z1 && y >= GLASS.y0 && y <= GLASS.y1
+          ? { x: ((GLASS.z1 - z) / (GLASS.z1 - GLASS.z0)) * SW, y: ((GLASS.y1 - y) / (GLASS.y1 - GLASS.y0)) * SH }
+          : null;
+      return { fx, fy, zone: zoneAt(fx, fy), hold: onHold, screen };
     };
 
     let drag: null | { id: number; zone: Zone; last: number; turned: number; acc: number; moved: boolean } = null;
@@ -233,6 +240,13 @@ export default function IPodModel({ open, onExpand, onLoaded }: { open: boolean;
       if (!hit) return;
       if (hit.hold) {
         ipod.toggleHold();
+        return;
+      }
+      // The screen can be tapped too: a row opens, the title bar goes back.
+      if (hit.screen) {
+        e.preventDefault();
+        ipod.tap(hit.screen.y < HEAD ? "title" : Math.floor((hit.screen.y - HEAD) / ROW_H));
+        invalidate();
         return;
       }
       if (!hit.zone) return;
@@ -267,7 +281,8 @@ export default function IPodModel({ open, onExpand, onLoaded }: { open: boolean;
           }
         }
       } else if (e.pointerType === "mouse") {
-        const cursor = !s.open || hit?.zone || hit?.hold ? "pointer" : "";
+        if (s.open && hit?.screen && hit.screen.y >= HEAD) ipod.hover(Math.floor((hit.screen.y - HEAD) / ROW_H));
+        const cursor = !s.open || hit?.zone || hit?.hold || hit?.screen ? "pointer" : "";
         if (el.style.cursor !== cursor) el.style.cursor = cursor;
       }
       invalidate();

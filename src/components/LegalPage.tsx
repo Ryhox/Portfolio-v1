@@ -10,7 +10,7 @@ export default function LegalPage({ title, lead, updated, children }: { title: s
         <Link href="/" className="legal-mark">
           ryhox
         </Link>
-        <Link href="/" className="legal-back glass-pill">
+        <Link href="/" className="legal-back nav-pill">
           ← Back
         </Link>
       </header>

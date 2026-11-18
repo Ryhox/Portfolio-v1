@@ -14,7 +14,7 @@ const email = links.email.replace("mailto:", "");
 // Privacy policy (GDPR). The bracketed line is yours to fill in: where the site is hosted.
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy" lead="No cookies, no tracking, no analytics. Here’s the little that does happen." updated="September 2026">
+    <LegalPage title="Privacy" lead="No cookies, no tracking, no analytics. Here’s the little that does happen." updated="November 2026">
       <section>
         <h2>Who’s responsible</h2>
         <p>
@@ -34,8 +34,11 @@ export default function Privacy() {
 
       <section>
         <h2>Stored in your browser</h2>
-        <p>No cookies. Two small notes in local storage, which never leave your device:</p>
+        <p>No cookies. A few small notes in local storage, which never leave your device:</p>
         <ul>
+          <li>
+            <code>ryhox-theme</code> remembers whether you picked day or night.
+          </li>
           <li>
             <code>ipod-music-ok</code> remembers that you allowed song previews from Apple.
           </li>

@@ -190,7 +190,7 @@ export default function IPod({ ready }: { ready: boolean }) {
       </div>
       {!phone && shown && !open ? (
         <p className="ipod-tip" aria-hidden>
-          psst, I work ✧
+          psst, I work
         </p>
       ) : null}
     </>

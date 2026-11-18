@@ -5,51 +5,40 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { gsap } from "gsap";
 import SmoothScroll, { lenis } from "./SmoothScroll";
 import Motion from "./Motion";
-import Wand from "./Wand";
 import ActionFx from "./ActionFx";
 import IPod from "./IPod";
+import CloudPass from "./CloudPass";
+import MiniPlayer from "./MiniPlayer";
 import TerrainDebug from "./stage/TerrainDebug";
 import { intro } from "@/lib/intro";
-import { introFx } from "@/lib/introFx";
 
 const Scene = dynamic(() => import("./three/Scene"), { ssr: false });
-const StageCanvas = dynamic(() => import("./stage/StageCanvas"), { ssr: false });
 
-// Jelly wobble for a digit that just changed. Web Animations on transform run on the compositor,
-// so the counter stays smooth even while the main thread is busy loading.
-const JELLY: Keyframe[] = [
-  { transform: "translateY(10px) scale(1.16, 0.8)" },
-  { transform: "translateY(-4px) scale(0.94, 1.08)", offset: 0.3 },
-  { transform: "translateY(1px) scale(1.03, 0.97)", offset: 0.6 },
-  { transform: "none" },
-];
+// The loader stays up at least this long, so the count reads as a count and not a flash.
+const MIN_LOAD = 1200;
 
 export default function Experience({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const loader = useRef<HTMLDivElement>(null);
-  const digits = useRef<(HTMLSpanElement | null)[]>([]);
+  const count = useRef<HTMLSpanElement>(null);
   const [sceneReady, setSceneReady] = useState(false);
-  const [stageReady, setStageReady] = useState(false);
+  // (The cat's stage is off for now, so there's nothing of it to wait for.)
+  const stageReady = true;
   const [revealed, setRevealed] = useState(false);
-  // Scroll choreography is built while the loader is still up (not at the pop, which must stay buttery).
+  // Scroll choreography is built while the loader is still up (not at the reveal, which must stay smooth).
   const [motionSetup, setMotionSetup] = useState(false);
   const onMotionReady = useCallback(() => setMotionSetup(true), []);
   const onSceneReady = useCallback(() => setSceneReady(true), []);
-  const onStageReady = useCallback(() => setStageReady(true), []);
 
-  // Displayed value eases toward the real loading progress; digits wobble like jelly when they change.
-  const progress = useRef({ v: 0, target: 4, finishing: false });
+  // Displayed value eases toward the real loading progress.
+  const progress = useRef({ v: 0, target: 4, finishing: false, born: 0 });
   const render = useCallback(() => {
     const text = String(Math.round(progress.current.v));
-    digits.current.forEach((el, i) => {
-      if (!el) return;
-      const ch = text[i - (3 - text.length)] ?? "";
-      el.style.display = ch ? "" : "none";
-      if (el.dataset.d === ch) return;
-      el.dataset.d = ch;
-      el.textContent = ch;
-      if (ch) el.animate(JELLY, { duration: 650, easing: "cubic-bezier(0.2, 0.9, 0.3, 1)" });
-    });
+    if (count.current && count.current.textContent !== text) {
+      count.current.textContent = text;
+      // (The chrome fill is a copy of the letters drawn on top, see .char::after in globals.css.)
+      count.current.dataset.c = text;
+    }
   }, []);
 
   const onProgress = useCallback((p: number) => {
@@ -57,11 +46,11 @@ export default function Experience({ children }: { children: ReactNode }) {
     progress.current.target = Math.max(progress.current.target, 8 + p * 0.8);
   }, []);
 
-  // Y2K touch: the tab misses you when you leave.
+  // The tab misses you when you leave.
   useEffect(() => {
     const title = document.title;
     const onVisibility = () => {
-      document.title = document.hidden ? "✧ come back, the cat misses u ✧" : title;
+      document.title = document.hidden ? "come back ↩ ryhox.dev" : title;
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
@@ -70,14 +59,18 @@ export default function Experience({ children }: { children: ReactNode }) {
   useEffect(() => {
     lenis?.stop();
     const p = progress.current;
+    p.born = performance.now();
     document.fonts?.ready.then(() => {
       p.target = Math.max(p.target, 14);
     });
-    const start = performance.now();
+    // Only while loading: once the count is finishing, the timeline below drives it and this stops for good.
     const tick = () => {
-      if (p.finishing) return;
+      if (p.finishing) {
+        gsap.ticker.remove(tick);
+        return;
+      }
       // Never looks stuck: a slow floor that creeps toward 90% while real progress catches up.
-      const floor = 90 * (1 - Math.exp(-(performance.now() - start) / 2600));
+      const floor = 90 * (1 - Math.exp(-(performance.now() - p.born) / 1400));
       const target = Math.max(p.target, floor);
       const next = p.v + (target - p.v) * 0.09;
       if (Math.abs(next - p.v) > 0.02) {
@@ -89,36 +82,46 @@ export default function Experience({ children }: { children: ReactNode }) {
     return () => gsap.ticker.remove(tick);
   }, [render]);
 
-  // Everything compiled: count to 100, let the number fade away, then hand over to the WebGL bubbles that
-  // pop through the sky curtain (IntroFX).
+  // Everything compiled: count to 100, the number rises out of sight (the way the name comes in), the sky
+  // underneath takes over and the name rises into place.
   useEffect(() => {
     if (!motionSetup) return;
     const p = progress.current;
-    p.finishing = true;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wait = Math.max(0, MIN_LOAD - (performance.now() - p.born)) / 1000;
 
-    const start = () => {
-      introFx.onCover = () => {
-        // The WebGL curtain matches the loader pixel for pixel: the DOM loader can go.
-        if (loader.current) loader.current.style.display = "none";
-      };
-      introFx.onPop = () => {
-        intro.at = performance.now() / 1000;
-        gsap.fromTo(".scene", { scale: 1.12 }, { scale: 1, duration: 1.7, ease: "expo.out", clearProps: "transform" });
-        gsap.from(".nav > *", { yPercent: -160, autoAlpha: 0, duration: 1, stagger: 0.08, ease: "expo.out", delay: 0.5 });
-        setRevealed(true);
-        lenis?.start();
-      };
-      introFx.onDone = null;
-      // No bubbles grow out of the digits any more: they have faded.
-      introFx.seeds = [];
-      introFx.t0 = performance.now() / 1000;
+    const reveal = () => {
+      intro.at = performance.now() / 1000;
+      setRevealed(true);
+      lenis?.start();
+      if (reduced) return;
+      gsap.fromTo(".scene", { scale: 1.12 }, { scale: 1, duration: 1.8, ease: "expo.out", clearProps: "transform" });
+      gsap.from(".nav > *", { yPercent: -160, autoAlpha: 0, duration: 1, stagger: 0.08, ease: "expo.out", delay: 0.45 });
+      gsap.fromTo(".hero-title .char", { yPercent: 150, rotate: 10 }, { yPercent: 0, rotate: 0, duration: 1.3, stagger: 0.07, ease: "expo.out", delay: 0.2 });
+      gsap.from(".hero-role", { y: 24, autoAlpha: 0, duration: 1.1, ease: "expo.out", delay: 0.6 });
     };
 
-    const tl = gsap.timeline();
-    tl.to(p, { v: 100, duration: 0.35, ease: "power2.out", onUpdate: render })
-      // "100%" fades as one piece.
-      .to(".loader-count", { y: -24, autoAlpha: 0, filter: "blur(6px)", duration: 0.5, ease: "power2.in" }, "+=0.15")
-      .add(start, "-=0.1");
+    const tl = gsap.timeline({ delay: wait });
+    tl.to(p, {
+      v: 100,
+      duration: 0.45,
+      ease: "power2.out",
+      onStart: () => {
+        p.finishing = true;
+      },
+      onUpdate: render,
+    })
+      .to(".loader-num .char", { yPercent: -125, rotate: -8, duration: reduced ? 0.01 : 0.6, ease: "power3.in" }, "+=0.15")
+      .to(".loader-sub", { y: -10, autoAlpha: 0, duration: reduced ? 0.01 : 0.35, ease: "power2.in" }, "<")
+      .add(reveal, "-=0.1")
+      .to(loader.current, {
+        autoAlpha: 0,
+        duration: reduced ? 0.01 : 0.7,
+        ease: "power2.inOut",
+        onComplete: () => {
+          if (loader.current) loader.current.style.display = "none";
+        },
+      }, "<");
     return () => {
       tl.kill();
     };
@@ -129,40 +132,33 @@ export default function Experience({ children }: { children: ReactNode }) {
       <div ref={root} className={revealed ? "app is-ready" : "app"}>
         <SmoothScroll />
         <Motion ready={sceneReady && stageReady} onReady={onMotionReady} />
-        <Wand />
         <ActionFx ready={motionSetup} />
         <TerrainDebug />
         <div className="scene" aria-hidden>
           <Scene eventSource={root} onReady={onSceneReady} onProgress={onProgress} />
         </div>
-        <div className="stage" aria-hidden>
-          <StageCanvas eventSource={root} onReady={onStageReady} />
-        </div>
+        {/* The flight through the clouds between About and the work (over the page, under the nav). */}
+        <CloudPass />
         <div className="progress" aria-hidden>
           <div className="progress-fill" />
         </div>
+        {/* While everything loads: the sky, and the count in the same chrome letters as the name. At 100 it
+            rises out of sight and the name rises in. */}
         <div ref={loader} className="loader" aria-hidden>
-          <div className="loader-count">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="loader-digit"
-                data-d={i === 2 ? "0" : ""}
-                style={i === 2 ? undefined : { display: "none" }}
-                ref={(el) => {
-                  digits.current[i] = el;
-                }}
-              >
-                {i === 2 ? "0" : ""}
+          <div className="loader-num">
+            <span className="char-mask">
+              <span ref={count} className="char" data-c="0">
+                0
               </span>
-            ))}
-            <span className="loader-pct">%</span>
+            </span>
           </div>
+          <p className="loader-sub">loading the sky</p>
         </div>
         {children}
       </div>
       {/* Outside the app root: presses on the iPod never reach the 3D scenes behind it. */}
       <IPod ready={revealed} />
+      <MiniPlayer />
     </>
   );
 }

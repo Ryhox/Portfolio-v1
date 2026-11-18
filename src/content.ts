@@ -3,12 +3,19 @@ import { links, type ProjectLinks } from "./links";
 export const profile = {
   handle: "ryhox",
   role: "Creative developer",
-  // The About headline; the rest of the old statement became the constellations below.
+  // The About headline ("==words==" get the highlighter).
   statement: "I build ==playful, tactile== things for the web.",
   note: "Open for freelance, collabs and weird ideas.",
 };
 
-export const marquee = ["Creative developer", "Three.js", "WebGL", "Apps", "Interfaces", "Experiments"];
+// Lines by poets, set big between the sections (the first after the statement, the second before contact).
+// Both are long out of copyright; the wording follows the first editions.
+export type Quote = { text: string; by: string; work: string };
+
+export const quotes: Quote[] = [
+  { text: "What is now proved was once only imagin'd.", by: "William Blake", work: "Proverbs of Hell, 1790" },
+  { text: "A thing of beauty is a joy for ever.", by: "John Keats", work: "Endymion, 1818" },
+];
 
 export const github = { handle: "Ryhox", href: links.github };
 
@@ -21,8 +28,13 @@ type Project = {
   stack: string;
   video: string;
   poster: string;
+  // A smaller AV1 cut of the clip, for browsers that can play it (the H.264 `video` is the fallback).
+  av1?: string;
   focus?: string;
   links: ProjectLinks;
+  // A few real lines from the repo, shown when you point at "Source code": short and plain enough that anyone
+  // can follow what they do. Copied as they are (a "…" line marks lines left out).
+  code: { file: string; lines: string[] };
 };
 
 // Clips are pre-encoded small (H.264, 1120px, no audio, faststart) with a WebP poster for instant paint.
@@ -35,6 +47,21 @@ export const projects: Project[] = [
     video: "/work/stargazer.mp4",
     poster: "/work/stargazer.webp",
     links: links.projects.stargazer,
+    code: {
+      file: "src/scene/archipelago/archipelago.ts",
+      lines: [
+        "export function buildIslands(logins: string[]): IslandInstance[] {",
+        "  …",
+        "  const stars: IslandInstance[] = logins.map((login, rank) => {",
+        "    const seed = hashLogin(login.toLowerCase())",
+        "    const rng = mulberry32(seed)",
+        "    // Three permanent rolls from the username hash: theme (group), the look",
+        "    // within it, and the size tier. Order matters — keep it stable.",
+        "    let theme = pickWeighted(THEMES, rng)",
+        "    let biome = pickWeighted(theme.variants, rng)",
+        "    let size = pickWeighted(SIZE_TIERS, rng)",
+      ],
+    },
   },
   {
     id: "wieland",
@@ -46,6 +73,21 @@ export const projects: Project[] = [
     // Wide recording: keep the prompt box in frame when the panel crops the sides.
     focus: "18% 50%",
     links: links.projects.wieland,
+    code: {
+      file: "server/server.js",
+      lines: [
+        "async function generateChatTitle(",
+        "  firstUserMessage,",
+        '  model = getModelForPlan("free"),',
+        ") {",
+        "  const truncated = firstUserMessage.slice(0, 200);",
+        "  try {",
+        "    const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {",
+        '      method: "POST",',
+        '      headers: { "Content-Type": "application/json" },',
+        "  …",
+      ],
+    },
   },
   {
     id: "pokyh",
@@ -53,8 +95,25 @@ export const projects: Project[] = [
     description: "WebUntis, reimagined: timetable, grades and the cafeteria menu in one installable app.",
     stack: "Next.js · PWA · Push notifications",
     video: "/work/pokyh.mp4",
+    av1: "/work/pokyh.av1.mp4",
     poster: "/work/pokyh.webp",
     links: links.projects.pokyh,
+    code: {
+      file: "lib/grades.ts",
+      lines: [
+        "export function averageOf(values: number[]): number {",
+        "  if (!values.length) return 0;",
+        "  return round2(values.reduce((a, b) => a + b, 0) / values.length);",
+        "}",
+        "",
+        "export function gradeClass(value: number): GradeClass {",
+        "  if (value >= 9) return 'v-excellent';",
+        "  if (value >= 6) return 'v-positive';",
+        "  if (value > 4) return 'v-negative';",
+        "  return 'v-critical';",
+        "}",
+      ],
+    },
   },
   {
     id: "flylab",
@@ -64,6 +123,19 @@ export const projects: Project[] = [
     video: "/work/flylab.mp4",
     poster: "/work/flylab.webp",
     links: links.projects.flylab,
+    code: {
+      file: "src/game/machine.js",
+      lines: [
+        "/** One spin in seven pays. A real machine is not a fountain and neither is this. */",
+        "const WIN_RATE = 0.14;",
+        "…",
+        "export function rollOutcome(rng = Math.random, { winRate = WIN_RATE, nearMissRate = 0.45 } = {}) {",
+        "  if (rng() < winRate) {",
+        "    const s = pickWeighted(rng);",
+        "    return { reels: [s, s, s], win: true, jackpot: SYMBOLS[s].id === 'seven' };",
+        "  }",
+      ],
+    },
   },
   {
     id: "projectile",
@@ -73,60 +145,103 @@ export const projects: Project[] = [
     video: "/work/projectile.mp4",
     poster: "/work/projectile.webp",
     links: links.projects.projectile,
+    code: {
+      file: "src/client/…/projectile/TrajectorySim.java",
+      lines: [
+        "// First integrate the pure physics path, so entities can be gathered in one query.",
+        "…",
+        "for (int i = 1; i <= steps; i++) {",
+        "    if (decayBeforeMove) {",
+        "        vel = vel.add(0.0, -gravity, 0.0).scale(drag);",
+        "    }",
+        "",
+        "    pos = pos.add(vel.scale(stepTime));",
+        "    path[i] = pos;",
+      ],
+    },
+  },
+  {
+    id: "elsewhere",
+    title: "Little Elsewhere",
+    description: "A cozy pixel-art idle game about growing a tiny world from a single spring. Every sprite and sound is made in code.",
+    stack: "TypeScript · React · Canvas 2D",
+    video: "/work/elsewhere.mp4",
+    poster: "/work/elsewhere.webp",
+    links: links.projects.elsewhere,
+    code: {
+      file: "src/art/kit.ts",
+      lines: [
+        "/** A little paned window. Returns its glow rectangle for night lighting. */",
+        "export function windowAt(p: Pix, x: number, y: number, w = 5, h = 5): number[] {",
+        "  p.rect(x, y, w, h, PAL.woodDark[1]);",
+        "  p.rect(x + 1, y + 1, w - 2, h - 2, PAL.blue[3]);",
+        "  p.set(x + 1, y + 1, PAL.blue[4]);",
+        "  p.rect(x, y + h, w, 1, PAL.wood[4]);",
+        "  return [x + 1, y + 1, w - 2, h - 2, GLOW_LAMPLIT];",
+        "}",
+      ],
+    },
   },
 ];
 
-// The About section: one constellation per ability (drawn in components/three/constellations.ts).
-// `figure` names what the stars draw, `tools` label its brightest stars, `proof` points at the work.
+// The About section ("What I do"): one row per trade, with the tools it's done with (their logos live in
+// public/logos). `proof` points at the work.
+export type Tool = { name: string; logo: string; what: string; url: string };
+
 export type Ability = {
-  id: "worlds" | "apps" | "ai" | "mods" | "motion";
+  id: "motion" | "apps" | "data" | "mods";
   title: string;
   line: string;
-  tools: string[];
+  tools: Tool[];
   proof: { label: string; project?: ProjectId }[];
-  figure: string;
 };
 
 export const abilities: Ability[] = [
   {
-    id: "worlds",
-    title: "3D worlds",
-    line: "Explorable, real-time scenes that run in a browser tab. Floating islands, liquid glass letters, a cat rigged entirely in a shader.",
-    tools: ["Three.js", "React Three Fiber", "GLSL", "WebGL"],
+    id: "motion",
+    title: "3D & motion",
+    line: "Real-time 3D in a browser tab, and pages that move like they mean it.",
+    tools: [
+      { name: "Three.js", logo: "three", what: "The 3D engine of the web: scenes, lights and cameras, drawn with WebGL.", url: "https://threejs.org" },
+      { name: "GSAP", logo: "gsap", what: "Animation timelines and scroll choreography, to the frame.", url: "https://gsap.com" },
+      { name: "Lenis", logo: "lenis", what: "Smooth scrolling, so a page glides instead of jumping.", url: "https://lenis.darkroom.engineering" },
+    ],
     proof: [{ label: "Stargazer Islands", project: "stargazer" }, { label: "this site" }],
-    figure: "The cube",
   },
   {
     id: "apps",
     title: "Everyday apps",
-    line: "Apps people open every day, on the web and on phones: timetables, grades and the cafeteria menu, with push notifications that actually arrive.",
-    tools: ["Next.js", "React", "TypeScript", "Flutter"],
-    proof: [{ label: "Pokyh", project: "pokyh" }],
-    figure: "The flip phone",
+    line: "Apps people open every day, on the web and on phones.",
+    tools: [
+      { name: "JavaScript", logo: "js", what: "The language of the web, running in every browser there is.", url: "https://developer.mozilla.org/docs/Web/JavaScript" },
+      { name: "TypeScript", logo: "ts", what: "JavaScript with types, so mistakes show up before anyone else sees them.", url: "https://www.typescriptlang.org" },
+      { name: "React", logo: "react", what: "Builds interfaces out of small components that update themselves.", url: "https://react.dev" },
+      { name: "Next.js", logo: "next", what: "The React framework this site runs on: routing, rendering, speed.", url: "https://nextjs.org" },
+      { name: "Flutter", logo: "flutter", what: "One codebase for real apps on iPhone, Android and the web.", url: "https://flutter.dev" },
+    ],
+    proof: [{ label: "Pokyh", project: "pokyh" }, { label: "Little Elsewhere", project: "elsewhere" }],
   },
   {
-    id: "ai",
-    title: "AI & backends",
-    line: "Private AI that runs on your own machine, the servers and databases behind the apps, and a simulated fruit-fly brain with a gambling problem.",
-    tools: ["Ollama", "Node.js", "PostgreSQL", "MySQL", "JavaScript"],
+    id: "data",
+    title: "Servers & data",
+    line: "The servers and the databases behind the apps.",
+    tools: [
+      { name: "Node.js", logo: "node", what: "JavaScript on the server: APIs, bots and the tools behind the apps.", url: "https://nodejs.org" },
+      { name: "PostgreSQL", logo: "postgres", what: "A rock-solid database for data that has to be right.", url: "https://www.postgresql.org" },
+      { name: "MySQL", logo: "mysql", what: "The classic open-source SQL database, quick and everywhere.", url: "https://www.mysql.com" },
+    ],
     proof: [{ label: "Wieland AI", project: "wieland" }, { label: "Fly Lab", project: "flylab" }],
-    figure: "The network",
   },
   {
     id: "mods",
     title: "Mods & hardware",
-    line: "Minecraft mods that bend the rules a little, and C# and Arduino for the things that don't live in a browser.",
-    tools: ["Java", "Kotlin", "C#", "Arduino", "Fabric"],
+    line: "Minecraft mods, and code for things that don’t live in a browser.",
+    tools: [
+      { name: "Java", logo: "java", what: "What Minecraft is made of, and the mods I write for it.", url: "https://dev.java" },
+      { name: "C#", logo: "csharp", what: "Microsoft’s language, for Unity games and Windows tools.", url: "https://learn.microsoft.com/dotnet/csharp/" },
+      { name: "Arduino", logo: "arduino", what: "Little boards that let code switch, sense and move real things.", url: "https://www.arduino.cc" },
+    ],
     proof: [{ label: "Projectile Preview", project: "projectile" }],
-    figure: "The pickaxe",
-  },
-  {
-    id: "motion",
-    title: "Motion & feel",
-    line: "Scroll choreography, physics and tiny interactions that make an interface feel like a toy. You are scrolling through one.",
-    tools: ["GSAP", "ScrollTrigger", "Lenis"],
-    proof: [{ label: "this site" }],
-    figure: "The paper plane",
   },
 ];
 
@@ -136,28 +251,3 @@ export const socials = [
   // No href: Discord handles are copied to the clipboard.
   { label: "Discord", handle: links.discord },
 ];
-
-// Hover cards on the constellation stars: what each tool is, and where it lives.
-export const tech: Record<string, { info: string; url: string }> = {
-  "Three.js": { info: "The 3D engine of the web: scenes, lights, materials, shaders.", url: "https://threejs.org" },
-  "React Three Fiber": { info: "Three.js written as React components.", url: "https://r3f.docs.pmnd.rs" },
-  GLSL: { info: "The shading language: little programs that run on the GPU for every pixel.", url: "https://www.khronos.org/opengl/wiki/Core_Language_(GLSL)" },
-  WebGL: { info: "The browser's direct line to the graphics card.", url: "https://www.khronos.org/webgl/" },
-  "Next.js": { info: "The React framework for fast, server-rendered, installable web apps.", url: "https://nextjs.org" },
-  React: { info: "A library for building interfaces out of components.", url: "https://react.dev" },
-  TypeScript: { info: "JavaScript with types that catch mistakes before they ship.", url: "https://www.typescriptlang.org" },
-  Flutter: { info: "One Dart codebase, native apps for phones and more.", url: "https://flutter.dev" },
-  Ollama: { info: "Runs large language models on your own machine.", url: "https://ollama.com" },
-  "Node.js": { info: "JavaScript on the server: APIs, tools and scripts.", url: "https://nodejs.org" },
-  PostgreSQL: { info: "A powerful open-source relational database.", url: "https://www.postgresql.org" },
-  MySQL: { info: "The classic open-source relational database.", url: "https://www.mysql.com" },
-  JavaScript: { info: "The language every browser speaks.", url: "https://developer.mozilla.org/docs/Web/JavaScript" },
-  Java: { info: "The JVM language Minecraft and its mods are built in.", url: "https://dev.java" },
-  Kotlin: { info: "A modern, concise language for the JVM and Android.", url: "https://kotlinlang.org" },
-  "C#": { info: "Microsoft's language for apps, tools and games on .NET.", url: "https://learn.microsoft.com/dotnet/csharp/" },
-  Arduino: { info: "Small programmable boards for things that blink, beep and move.", url: "https://www.arduino.cc" },
-  Fabric: { info: "A lightweight toolchain for modding Minecraft.", url: "https://fabricmc.net" },
-  GSAP: { info: "A professional-grade animation engine for the web.", url: "https://gsap.com" },
-  ScrollTrigger: { info: "GSAP's plugin for animations driven by the scroll.", url: "https://gsap.com/docs/v3/Plugins/ScrollTrigger/" },
-  Lenis: { info: "Smooth scrolling that stays in sync with everything else.", url: "https://lenis.darkroom.engineering" },
-};

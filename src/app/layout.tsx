@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Bungee, Fredoka, Manrope, Orbitron } from "next/font/google";
-import { preload } from "react-dom";
+import { Bungee, Manrope, Orbitron } from "next/font/google";
 import "lenis/dist/lenis.css";
 import "./globals.css";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 // Y2K type: blocky Bungee for the big chrome headlines, Orbitron for buttons and labels.
 const display = Bungee({
@@ -16,25 +16,19 @@ const ui = Orbitron({
   subsets: ["latin"],
 });
 
-const bubble = Fredoka({
-  variable: "--font-bubble",
-  subsets: ["latin"],
-  weight: "700",
-});
-
 const sans = Manrope({
   variable: "--font-sans",
   subsets: ["latin"],
 });
 
 const SITE = "https://ryhox.dev";
-const TITLE = "✧ Portfolio ✧ ryhox.dev";
+const TITLE = "ryhox | Creative developer";
 const DESCRIPTION =
-  "ryhox is a creative developer building playful, tactile things for the web: interactive Three.js worlds, WebGL experiments, apps people use every day and Minecraft mods. Bubbles and a chonky cat included.";
+  "ryhox is a creative developer building playful, tactile things for the web: interactive Three.js worlds, WebGL experiments, apps people use every day and Minecraft mods. Comes with a working iPod.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: { default: TITLE, template: "%s ✧ ryhox" },
+  title: { default: TITLE, template: "%s | ryhox" },
   description: DESCRIPTION,
   applicationName: "ryhox",
   authors: [{ name: "ryhox", url: "https://github.com/Ryhox" }],
@@ -81,9 +75,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // The top of the sky, so the browser bar blends into the page.
-  themeColor: "#2f7fe2",
-  colorScheme: "light",
+  // The top of the sky (day / night), so the browser bar blends into the page. The theme switch keeps it in sync.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#2f7fe2" },
+    { media: "(prefers-color-scheme: dark)", color: "#050b1f" },
+  ],
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   // Edge to edge on notched phones (the nav and the corners keep to the safe area).
@@ -92,9 +89,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   // Start fetching the 3D model with the HTML instead of after the JS has booted.
-  preload("/models/cat.glb", { as: "fetch", crossOrigin: "anonymous" });
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} ${ui.variable} ${bubble.variable}`}>
+    <html lang="en" data-theme="light" suppressHydrationWarning className={`${sans.variable} ${display.variable} ${ui.variable}`}>
+      <head>
+        {/* Day or night before the first paint: the saved choice, else the system's. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

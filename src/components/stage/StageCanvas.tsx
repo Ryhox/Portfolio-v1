@@ -8,12 +8,6 @@ import HoloEnvironment from "../three/HoloEnvironment";
 import TickerDrive from "../three/TickerDrive";
 import { intro } from "@/lib/intro";
 import CatActor from "./CatActor";
-import WandBubbles from "./WandBubbles";
-import Garden from "./Garden";
-import Grass from "./Grass";
-import Wand3D from "./Wand3D";
-import Bursts from "./Bursts";
-import { flowerGeometries, flowerMaterials } from "./flowers";
 import { FOV, PX, TILT, view } from "./view";
 import { bindPlatforms, live, measurePlatforms } from "./platforms";
 
@@ -50,19 +44,6 @@ function StageRig() {
   }, -2);
 
   return null;
-}
-
-// Invisible-in-practice meshes so every garden material is compiled with the first warm-up.
-function Prewarm() {
-  const g = flowerGeometries();
-  const m = flowerMaterials();
-  return (
-    <group position={[0, 0, -60]} scale={0.001}>
-      <mesh geometry={g.stem} material={m.stem} />
-      <mesh geometry={g.leaf} material={m.center} />
-      <mesh geometry={g.leaf} material={m.petals[0]} />
-    </group>
-  );
 }
 
 // Reports ready once the cat is loaded and every stage shader (intro included) is compiled.
@@ -110,12 +91,6 @@ export default function StageCanvas({
         <CatActor />
         <StageReady onReady={onReady} />
       </Suspense>
-      <WandBubbles />
-      <Grass />
-      <Wand3D />
-      <Garden />
-      <Bursts />
-      <Prewarm />
     </Canvas>
   );
 }

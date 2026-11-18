@@ -14,7 +14,7 @@ const email = links.email.replace("mailto:", "");
 // Legal notice and credits. A personal site run from Italy: no company details to list (see the first section).
 export default function Legal() {
   return (
-    <LegalPage title="Legal" lead="Who runs this site, and the credits for everything on it that isn’t mine." updated="September 2026">
+    <LegalPage title="Legal" lead="Who runs this site, and the credits for everything on it that isn’t mine." updated="November 2026">
       <section>
         <h2>Who runs this site</h2>
         <p>
@@ -52,7 +52,9 @@ export default function Legal() {
             . Changed: one cat of the three, animated.
           </li>
           <li>Songs on the ryPod: 30-second previews from Apple Music, each linking to the full song. Music and covers belong to the artists and their labels.</li>
-          <li>Fonts: Bungee, Orbitron, Fredoka and Manrope, SIL Open Font License 1.1.</li>
+          <li>Fonts: Bungee, Orbitron and Manrope, SIL Open Font License 1.1.</li>
+          <li>The logos in “What I do” belong to their makers and only name the tools I use (most from Devicon, MIT licence; GSAP from Simple Icons, CC0; Lenis from lenis.dev).</li>
+          <li>The quotes are by William Blake and John Keats, long in the public domain.</li>
           <li>Everything else (design, code, project videos and pictures) is my own work.</li>
         </ul>
       </section>

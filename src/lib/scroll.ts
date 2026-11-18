@@ -20,6 +20,13 @@ export const scroll = {
   floor: Infinity,
 };
 
+// How thick the clouds are behind the tech stack, 0..1 (set by the scroll in Motion.tsx, eased in Backdrop.tsx),
+// so its Liquid Glass always has cloud edges sliding under it to bend.
+// `glass`: the tech stack's capsules, whose Liquid Glass the sky draws under them (Stack.tsx registers them),
+// `glassNear`: whether the tech stack is within a screen or so (only then does the sky look for them).
+// `glassMoved`: the capsules' layout may have changed (they came near, or the stack resized): measure again.
+export const sky = { dense: 0, glass: [] as HTMLElement[], glassNear: false, glassMoved: true };
+
 export function measureSections() {
   const els = Array.from(document.querySelectorAll<HTMLElement>("[data-section]"));
   scroll.anchors = {};

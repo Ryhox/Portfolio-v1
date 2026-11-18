@@ -287,33 +287,9 @@ export function bindPlatforms() {
     }
   }
 
-  // --- About stage: the ability title that is showing (the words swap under the cat) ---
-  const abList = q(".ab-list");
-  if (abList) {
-    const titles = Array.from(abList.querySelectorAll<HTMLElement>(".ab-title"));
-    const s0 = withoutTransforms([abList, ...abList.querySelectorAll(".ability"), ...abList.querySelectorAll(".char"), ...abList.querySelectorAll(".char-mask")], () => {
-      // Hidden abilities are laid out too (visibility: hidden), so they can all be measured now.
-      const origin = abList.getBoundingClientRect();
-      const b = new ProfileBuilder();
-      for (const title of titles) {
-        const first = title.querySelector<HTMLElement>(".word");
-        const top = first?.offsetTop ?? 0;
-        // Only the first line of each title: that's the ledge.
-        for (const w of title.querySelectorAll<HTMLElement>(".word")) if (Math.abs(w.offsetTop - top) < 4) addText(b, w, origin, { dipEl: charMask, animated: true });
-      }
-      return b.build("stage", "text");
-    });
-    next.push({
-      surface: s0,
-      place: (s, vw, vh) => {
-        const r = abList.getBoundingClientRect();
-        setTranslate(s.m, r.left, r.top);
-        const bnd = visibleBand(s, vw, vh);
-        s.valid = bnd > 0;
-        s.score = bnd * 1.7;
-      },
-    });
-  }
+  // --- What I do: the heading is a ledge ---
+  const skillsHeading = q(".skills-heading");
+  if (skillsHeading) next.push(textSurface("skills", skillsHeading, { animated: true, score: 1.5 }));
 
   // --- Say hi ---
   const say = q(".sayhi");

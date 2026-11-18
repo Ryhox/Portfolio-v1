@@ -267,6 +267,37 @@ export function back() {
   return false;
 }
 
+// The pointer resting on a list row on the screen: that row gets the blue bar, as if scrolled to (no hold
+// warning: just pointing at it isn't pressing anything).
+export function hover(row: number) {
+  const v = top();
+  if (os.hold || v?.kind !== "menu") return;
+  const i = v.top + row;
+  if (i < 0 || i >= v.rows().length || i === v.sel) return;
+  v.sel = i;
+  click("tick");
+  notify();
+}
+
+// A tap on the screen itself. On a list the tapped row is picked and opened (as if scrolled to and pressed);
+// the title bar goes back (MENU); on Now Playing it plays / pauses; anywhere else it's the center button.
+export function tap(row: number | "title") {
+  if (!input()) return;
+  const v = top();
+  if (!v) return;
+  if (row === "title") {
+    back();
+    return;
+  }
+  if (v.kind === "menu") {
+    const i = v.top + row;
+    if (i < 0 || i >= v.rows().length) return;
+    v.sel = i;
+    select();
+  } else if (v.kind === "now") playPause();
+  else select();
+}
+
 export function playPause() {
   if (!input()) return;
   click("press");

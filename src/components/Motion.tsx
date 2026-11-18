@@ -3,13 +3,18 @@
 import { useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { scroll } from "@/lib/scroll";
-import { about } from "@/lib/about";
-import { marquee } from "@/content";
+import { scroll, sky } from "@/lib/scroll";
+import { stage } from "@/lib/stage";
+import { intro } from "@/lib/intro";
 import Snap from "lenis/snap";
 import { lenis } from "./SmoothScroll";
+import { cloudPass } from "./CloudPass";
+import { sfx } from "./ipod/clicker";
 
 gsap.registerPlugin(ScrollTrigger);
+
+// How far down the "o" glyph box its top edge sits (the box has room above the caps for the reveal).
+const PERCH_TOP = 0.24;
 
 // All scroll choreography for the DOM layer. Runs once `ready` flips (after the preloader).
 export default function Motion({ ready, onReady }: { ready: boolean; onReady?: () => void }) {
@@ -20,19 +25,39 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
       const mm = gsap.matchMedia();
 
       // ---------- Project videos: load + play only near the viewport, pause off-screen ----------
+      // The AV1 cut where the browser can play it, the H.264 clip everywhere else.
+      const av1 = document.createElement("video").canPlayType('video/mp4; codecs="av01.0.05M.08"') !== "";
+      const clipOf = (v: HTMLVideoElement) => (av1 && v.dataset.av1) || v.dataset.src || "";
       const videos = gsap.utils.toArray<HTMLVideoElement>(".panel-img");
+      // Starting a clip (spinning up its decoder, the first frame) is a hitch. So they all start as the
+      // gallery comes near (behind the clouds), one at a time, keep playing the whole way through it (no
+      // stop-start as panels slide by) and stop when you've left it.
+      const queue: HTMLVideoElement[] = [];
+      let starting = 0;
+      const startNext = () => {
+        starting = 0;
+        const v = queue.shift();
+        if (!v) return;
+        if (!v.src && v.dataset.src) v.src = clipOf(v);
+        v.play().catch(() => undefined);
+        if (queue.length) starting = window.setTimeout(startNext, 180);
+      };
       const io = new IntersectionObserver(
         (entries) => {
           for (const e of entries) {
             const v = e.target as HTMLVideoElement;
             if (e.isIntersecting) {
-              if (!v.src && v.dataset.src) v.src = v.dataset.src;
-              v.play().catch(() => undefined);
-            } else if (!v.paused) v.pause();
+              if (v.paused && !queue.includes(v)) queue.push(v);
+            } else {
+              const i = queue.indexOf(v);
+              if (i >= 0) queue.splice(i, 1);
+              if (!v.paused) v.pause();
+            }
           }
+          if (queue.length && !starting) starting = window.setTimeout(startNext, 0);
         },
-        // Wide margin: the gallery moves sideways, start a bit before a clip slides in.
-        { rootMargin: "30% 60% 30% 60%" },
+        // Sideways the whole gallery counts as near; up and down, a good screen ahead.
+        { rootMargin: "80% 1000% 80% 1000%" },
       );
       videos.forEach((v) => io.observe(v));
       // Quietly buffer every clip in the background shortly after the intro, so they are instant later
@@ -44,19 +69,19 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
         videos.forEach((v) => {
           if (!v.src && v.dataset.src) {
             v.preload = "auto";
-            v.src = v.dataset.src;
+            v.src = clipOf(v);
           }
         });
       }, 6000);
 
       // ---------- Statement: words light up as you read ----------
+      // (Opacity and a small rise only: a live blur on every word had the GPU redraw each one every frame.)
       gsap.fromTo(
         ".statement .w",
-        { opacity: 0.1, y: "0.12em", filter: "blur(6px)" },
+        { opacity: 0.1, y: "0.12em" },
         {
           opacity: 1,
           y: 0,
-          filter: "blur(0px)",
           ease: "none",
           stagger: 0.12,
           scrollTrigger: { trigger: ".statement", start: "top 82%", end: "bottom 42%", scrub: true },
@@ -71,95 +96,137 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
         );
       });
 
-      // ---------- About: statement → pinned constellation stage ----------
-      // The stage pins; scroll morphs the sky from one constellation into the next (AboutSky reads
-      // `about`); the text panel swaps with it. The sky fades in behind the statement and out after the stage.
-      const aboutEl = document.querySelector<HTMLElement>(".about");
-      const stageEl = document.querySelector<HTMLElement>(".about-stage");
-      const abilityEls = gsap.utils.toArray<HTMLElement>(".ability");
-      const N = abilityEls.length;
-      const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-      // Stage progress → constellation: a staircase, so each one holds while you read it and morphs between.
-      // It starts and ends with the stars floating free (focus < 0 / > N - 1).
-      const SPAN = N + 0.45;
-      const rawAt = (p: number) => Math.min(N - 0.2, Math.max(-0.75, ((p - 0.04) / 0.92) * SPAN - 0.6));
-      const progressFor = (i: number) => 0.04 + ((i + 0.6) / SPAN) * 0.92;
-      let aboutTick: (() => void) | null = null;
       const aboutOffs: (() => void)[] = [];
-      if (aboutEl && stageEl && N) {
-        const pin = ScrollTrigger.create({
-          trigger: stageEl,
-          pin: true,
-          start: "top top",
-          end: () => "+=" + window.innerHeight * (SPAN * 0.62 + 0.3),
-          invalidateOnRefresh: true,
+
+      // ---------- Quotes: the letters come flying in from all over the screen ----------
+      // Every letter starts somewhere wild (far off to a side, tumbling, huge or tiny, faded out) and the scroll
+      // reels them all in; by the time the quote is in the middle of the screen it reads as a sentence. (No
+      // blur on them: hundreds of live blurs were the main thing dropping frames here.)
+      gsap.utils.toArray<HTMLElement>(".quote").forEach((q) => {
+        const rnd = gsap.utils.random;
+        gsap.fromTo(
+          q.querySelectorAll(".qc"),
+          {
+            x: () => rnd(-0.55, 0.55) * window.innerWidth,
+            y: () => rnd(-0.45, 0.6) * window.innerHeight,
+            z: () => rnd(-400, 600),
+            rotation: () => rnd(-200, 200),
+            rotationX: () => rnd(-120, 120),
+            rotationY: () => rnd(-120, 120),
+            scale: () => rnd(0.2, 2.6),
+            opacity: 0,
+          },
+          {
+            x: 0,
+            y: 0,
+            z: 0,
+            rotation: 0,
+            rotationX: 0,
+            rotationY: 0,
+            scale: 1,
+            opacity: 1,
+            ease: "power2.out",
+            stagger: { each: 0.012, from: "random" },
+            scrollTrigger: { trigger: q, start: "top bottom", end: "center 58%", scrub: 0.6, invalidateOnRefresh: true },
+          },
+        );
+        gsap.from(q.querySelectorAll(".quote-by > *"), {
+          y: 20,
+          opacity: 0,
+          stagger: 0.1,
+          duration: 1,
+          ease: "expo.out",
+          scrollTrigger: { trigger: q, start: "center 62%", toggleActions: "play none none reverse" },
         });
-        const span = ScrollTrigger.create({ trigger: aboutEl, start: "top bottom", end: "bottom top" });
-        const strips = gsap.utils.toArray<HTMLElement>(".ab-count-strip, .ab-name-strip");
-        const meta = document.querySelector<HTMLElement>(".ab-meta");
-        const root = document.documentElement;
-        let night = -1;
-        let current = -1;
-        const show = (i: number) => {
-          const prev = current;
-          current = i;
-          about.swap = { at: performance.now(), index: i };
-          // i = -1: nothing yet (the stars haven't formed the first figure), so the counter waits too.
-          meta?.classList.toggle("is-on", i >= 0);
-          if (i >= 0) strips.forEach((strip, s) => gsap.to(strip, { yPercent: (-100 * i) / N, duration: 0.9, ease: "expo.out", overwrite: true, delay: s * 0.06 }));
-          abilityEls.forEach((el, k) => {
-            const chars = el.querySelectorAll(".ab-title .char");
-            const rest = el.querySelectorAll(".ab-line, .ab-proof");
-            const chips: Element[] = [];
-            if (k === i) {
-              el.classList.add("is-on");
-              gsap.killTweensOf([...chars, ...rest, ...chips]);
-              const d = prev >= 0 ? 0.16 : 0;
-              gsap.fromTo(chars, { yPercent: 118, rotationX: -88, opacity: 0 }, { yPercent: 0, rotationX: 0, opacity: 1, duration: 0.8, stagger: 0.028, ease: "expo.out", delay: d });
-              gsap.fromTo(rest, { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, stagger: 0.05, ease: "expo.out", delay: d + 0.14 });
-              gsap.fromTo(chips, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.7, stagger: 0.045, ease: "back.out(2.4)", delay: d + 0.24 });
-            } else if (k === prev) {
-              gsap.killTweensOf([...chars, ...rest, ...chips]);
-              gsap.to(chars, { yPercent: -110, rotationX: 75, opacity: 0, duration: 0.4, stagger: 0.012, ease: "power3.in" });
-              gsap.to([...rest, ...chips], {
-                y: -12,
-                opacity: 0,
-                duration: 0.3,
-                ease: "power2.in",
-                onComplete: () => {
-                  if (current !== k) el.classList.remove("is-on");
-                },
-              });
-            } else el.classList.remove("is-on");
+      });
+
+      // ---------- What I do: rows of Liquid Glass capsules (Stack.tsx), scrubbed like pokyhlabs ----------
+      // Everything here follows the scroll both ways: the heading's letters rise out of their masks, each row's
+      // rule draws across, its title rises, its words come up, and its capsules drop in one after another like
+      // drops of glass landing (a soft pop each, on the way down).
+      const reducedAll = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reducedAll) {
+        gsap
+          .timeline({ scrollTrigger: { trigger: ".skills-heading", start: "top 96%", end: "top 52%", scrub: 1 } })
+          .fromTo(".skills-heading .char", { yPercent: 150, rotate: 10 }, { yPercent: 0, rotate: 0, stagger: 0.035, duration: 0.9, ease: "expo.out" });
+
+        gsap.utils.toArray<HTMLElement>(".st-row").forEach((row) => {
+          const caps = row.querySelectorAll<HTMLElement>(".cap");
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: row,
+              start: "top 94%",
+              end: "top 46%",
+              scrub: 0.9,
+              onUpdate: (self) => {
+                // A pop for each capsule as it lands (only scrolling down, and not when flung far past).
+                const landed = Math.floor(Math.max(0, (self.progress - 0.38) / 0.62) * caps.length + 0.0001);
+                const was = Number(row.dataset.landed ?? 0);
+                if (landed > was && self.direction > 0 && Math.abs(self.getVelocity()) < 4000) sfx("pop", 0.85 + landed * 0.07);
+                row.dataset.landed = String(landed);
+              },
+            },
           });
-        };
-        aboutTick = () => {
-          const vh = window.innerHeight;
-          const y = scroll.y;
-          // Night falls as the constellation stage rises into view (stars, moon and bubbles all at once),
-          // and day comes back once the stack is read.
-          const enter = clamp01((y - (pin.start - vh * 0.8)) / (vh * 0.65));
-          const leave = clamp01((span.end - vh * 0.55 - y) / (vh * 0.7));
-          about.vis = Math.min(enter, leave);
-          // The page's ink follows the sky (light text at night, see globals.css).
-          const n = Math.round(about.vis * 200) / 200;
-          if (n !== night) {
-            night = n;
-            root.style.setProperty("--night", String(n));
-          }
-          const p = clamp01((y - pin.start) / Math.max(1, pin.end - pin.start));
-          about.progress = p;
-          // Before the stage the sky is just stars (-1.4 = nothing drawn yet).
-          const raw = y < pin.start ? -1.4 + clamp01((y - (pin.start - vh * 0.6)) / (vh * 0.6)) * 0.65 : rawAt(p);
-          // Gentle steps: each constellation lingers a little, the morphs stay smooth.
-          about.focus = raw - (Math.sin(raw * Math.PI * 2) / (Math.PI * 2)) * 0.6;
-          // The first ability's words arrive with its constellation (as the cube starts drawing), not before.
-          const idx = about.focus < -0.28 ? -1 : Math.min(N - 1, Math.max(0, Math.round(about.focus)));
-          if (idx !== current) show(idx);
-        };
-        gsap.ticker.add(aboutTick);
-        aboutOffs.push(() => root.style.removeProperty("--night"));
+          tl.fromTo(row.querySelector(".st-rule"), { scaleX: 0 }, { scaleX: 1, duration: 1, ease: "power2.inOut" }, 0)
+            .fromTo(row.querySelectorAll(".st-title .char"), { yPercent: 150 }, { yPercent: 0, stagger: 0.03, duration: 0.7, ease: "expo.out" }, 0.12)
+            .fromTo(row.querySelectorAll(".st-line, .ab-proof"), { y: 26, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.6, ease: "power3.out" }, 0.28)
+            // Drops of glass: one after another each fades in, rises into place and settles to full size, the
+            // glass under it with it (Backdrop.tsx). Upright the whole way; continuous, so it stays smooth
+            // however fast you scroll.
+            .fromTo(
+              caps,
+              { autoAlpha: 0, y: 30, scale: 0.9 },
+              { autoAlpha: 1, y: 0, scale: 1, stagger: 0.09, duration: 0.6, ease: "power3.out" },
+              0.38,
+            );
+        });
+        const end = document.querySelector(".st-end .st-rule");
+        if (end) gsap.fromTo(end, { scaleX: 0 }, { scaleX: 1, ease: "power2.inOut", scrollTrigger: { trigger: end, start: "top 96%", end: "top 70%", scrub: 0.9 } });
       }
+
+      // The clouds thicken behind the tech stack while it's on screen (Backdrop.tsx), for its glass to bend.
+      ScrollTrigger.create({
+        trigger: ".skills",
+        start: "top 85%",
+        end: "bottom 15%",
+        onUpdate: (self) => {
+          const p = self.progress;
+          sky.dense = Math.max(0, Math.min(1, p / 0.12, (1 - p) / 0.12));
+        },
+        onLeave: () => (sky.dense = 0),
+        onLeaveBack: () => (sky.dense = 0),
+      });
+
+      // ---------- Hero: the cat's perch is the top of the "o" in the name ----------
+      // Only while the cat's stage is on the page: measuring the letter every frame forces the browser to lay
+      // the page out again mid-frame, which is pure cost when nobody stands on it.
+      const perchEl = document.querySelector(".stage-canvas") ? document.querySelector<HTMLElement>("[data-perch] .char") : null;
+      let perchAt = 0;
+      const perchTick = () => {
+        const p = stage.perch;
+        if (!perchEl) return;
+        const r = perchEl.getBoundingClientRect();
+        const now = performance.now() / 1000;
+        const dt = perchAt ? Math.min(0.1, now - perchAt) : 0;
+        perchAt = now;
+        // The glyph's top edge sits a fixed fraction down its box (the box has room above the caps).
+        const x = r.left + r.width / 2;
+        const y = r.top + r.height * PERCH_TOP;
+        if (dt > 0) {
+          p.vx = (x - p.x) / dt;
+          p.vy = (y - p.y) / dt;
+        }
+        p.x = x;
+        p.y = y;
+        // Only once the name has risen into place, and while it's on screen.
+        p.valid = now - intro.at > 1.6 && r.bottom > 0 && r.top < window.innerHeight * 0.92;
+      };
+      if (perchEl) gsap.ticker.add(perchTick);
+      aboutOffs.push(() => {
+        gsap.ticker.remove(perchTick);
+        stage.perch.valid = false;
+      });
+
 
       // "Seen in" links fly to the project, wherever it sits in the (sideways) gallery.
       const gotoProject = (e: Event) => {
@@ -179,43 +246,6 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
       const gotoLinks = gsap.utils.toArray<HTMLAnchorElement>("[data-goto]");
       gotoLinks.forEach((a) => a.addEventListener("click", gotoProject));
       aboutOffs.push(() => gotoLinks.forEach((a) => a.removeEventListener("click", gotoProject)));
-
-      // ---------- Ticker (the music player): runs faster (and backwards) with the scroll ----------
-      const tickerEl = document.querySelector<HTMLElement>(".ticker");
-      const tickerInner = document.querySelector<HTMLElement>(".ticker-inner");
-      // One loop = one copy of the words (12 of them); start far in so "back" never runs out of track.
-      const LOOP = 60;
-      const WORD = LOOP / (marquee.length * 2);
-      const loops = tickerInner ? [gsap.fromTo(tickerInner, { xPercent: 0 }, { xPercent: -50, duration: LOOP, ease: "none", repeat: -1 })] : [];
-      loops.forEach((l) => l.totalTime(LOOP * 20));
-      let dir = 1;
-      let paused = false;
-      const onTick = () => {
-        const v = scroll.velocity;
-        if (Math.abs(v) > 0.2) dir = Math.sign(v);
-        const boost = 1 + Math.min(Math.abs(v) * 0.25, 6);
-        // Paused: glide to a stop instead of freezing mid-step.
-        loops.forEach((l) => l.timeScale(gsap.utils.interpolate(l.timeScale(), paused ? 0 : dir * boost, paused ? 0.14 : 0.1)));
-      };
-      gsap.ticker.add(onTick);
-      // The player's buttons: pause / play, and skip a word back or forward.
-      const playBtn = tickerEl?.querySelector<HTMLButtonElement>('[data-tk="play"]');
-      const onPlayer = (e: Event) => {
-        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-tk]");
-        if (!btn || !tickerEl) return;
-        gsap.fromTo(btn, { scale: 0.86 }, { scale: 1, duration: 0.5, ease: "back.out(3)", overwrite: true });
-        const kind = btn.dataset.tk;
-        if (kind === "play") {
-          paused = !paused;
-          tickerEl.classList.toggle("is-paused", paused);
-          playBtn?.setAttribute("aria-label", paused ? "Play the ticker" : "Pause the ticker");
-          return;
-        }
-        const step = kind === "next" ? WORD : -WORD;
-        loops.forEach((l) => gsap.to(l, { totalTime: l.totalTime() + step, duration: 0.55, ease: "power3.out", overwrite: true }));
-      };
-      tickerEl?.addEventListener("click", onPlayer);
-      aboutOffs.push(() => tickerEl?.removeEventListener("click", onPlayer));
 
       // ---------- Work: pinned horizontal gallery ----------
       mm.add("(min-width: 900px) and (pointer: fine)", () => {
@@ -240,9 +270,6 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
             return el ? el.getBoundingClientRect().top + window.scrollY : null;
           };
           const points: number[] = [0];
-          // About: one resting point per constellation.
-          const ap = ScrollTrigger.getAll().find((st) => st.pin === document.querySelector(".about-stage"));
-          if (ap) for (let i = 0; i < N; i++) points.push(ap.start + progressFor(i) * (ap.end - ap.start));
           const pin = ScrollTrigger.getAll().find((st) => st.pin === document.querySelector(".work"));
           const track = document.querySelector<HTMLElement>(".work-track");
           if (pin && track) {
@@ -274,6 +301,8 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
           x: () => -distance(),
           ease: "none",
           scrollTrigger: {
+            // (Sideways swipes drive it too while it's pinned, SmoothScroll.tsx.)
+            id: "work-slide",
             trigger: ".work",
             pin: true,
             start: "top top",
@@ -283,19 +312,13 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
           },
         });
 
-        gsap.from(".work-heading .char", {
-          yPercent: 135,
-          rotate: 10,
-          stagger: 0.035,
-          duration: 1.2,
-          ease: "expo.out",
-          scrollTrigger: { trigger: ".work", start: "top 70%", toggleActions: "play none none reverse" },
-        });
+        // (The heading has no reveal of its own here: it forms in the sunbreak inside the clouds, exactly where
+        // it sits, and is handed over to this one as the clouds clear, CloudPass.tsx.)
 
         gsap.utils.toArray<HTMLElement>(".panel").forEach((panel) => {
           const media = panel.querySelector(".panel-media");
           const img = panel.querySelector(".panel-img");
-          const chars = panel.querySelectorAll(".panel-title .char");
+          const title = panel.querySelector(".panel-label");
           const rest = panel.querySelectorAll(".panel-index, .panel-desc, .panel-meta, .panel-actions > *");
 
           // Image wipes open from the right, then drifts inside its frame.
@@ -318,12 +341,13 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
               scrollTrigger: { trigger: panel, containerAnimation: slide, start: "left right", end: "right left", scrub: true },
             },
           );
-          gsap.from(chars, {
-            yPercent: 135,
-            rotate: 12,
-            stagger: 0.025,
-            duration: 1,
-            ease: "expo.out",
+          // The name's glass label lands as one piece, like a drop of glass.
+          gsap.from(title, {
+            y: 26,
+            scale: 0.86,
+            opacity: 0,
+            duration: 0.9,
+            ease: "back.out(1.8)",
             scrollTrigger: { trigger: panel, containerAnimation: slide, start: "left 70%", toggleActions: "play none none reverse" },
           });
           gsap.from(rest, {
@@ -339,7 +363,7 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
         const more = document.querySelector(".panel-more");
         if (more) {
           gsap.from(more.querySelectorAll(".char"), {
-            yPercent: 135,
+            yPercent: 150,
             rotate: 12,
             stagger: 0.03,
             duration: 1.1,
@@ -359,8 +383,13 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
         // Panels lean into the scroll speed.
         const panels = gsap.utils.toArray<HTMLElement>(".panel");
         const lean = panels.map((p) => gsap.quickTo(p, "skewX", { duration: 0.9, ease: "power3.out" }));
+        // Only while the gallery is on screen, and only when the lean actually changes (re-aiming six tweens at
+        // panels nobody can see, every frame of scrolling anywhere on the page, was all cost).
+        let leaning = 0;
         const leanTick = () => {
-          const s = gsap.utils.clamp(-3, 3, -scroll.velocity * 0.12);
+          const s = slide.scrollTrigger?.isActive ? Math.round(gsap.utils.clamp(-3, 3, -scroll.velocity * 0.12) * 20) / 20 : 0;
+          if (s === leaning) return;
+          leaning = s;
           lean.forEach((q) => q(s));
         };
         gsap.ticker.add(leanTick);
@@ -378,11 +407,12 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
               scrollTrigger: { trigger: panel, start: "top 95%", end: "top 45%", scrub: true },
             },
           );
-          gsap.from(panel.querySelectorAll(".panel-title .char"), {
-            yPercent: 135,
-            stagger: 0.02,
-            duration: 1,
-            ease: "expo.out",
+          gsap.from(panel.querySelector(".panel-label"), {
+            y: 22,
+            scale: 0.88,
+            opacity: 0,
+            duration: 0.9,
+            ease: "back.out(1.8)",
             scrollTrigger: { trigger: panel, start: "top 70%", toggleActions: "play none none reverse" },
           });
           gsap.from(panel.querySelectorAll(".panel-desc, .panel-meta, .panel-actions > *"), {
@@ -396,10 +426,24 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
         });
       });
 
+      // ---------- About → Work: the flight through the clouds (CloudPass.tsx) ----------
+      // After the tech stack's last row has had its moment, the bank rises in through the open sky below it,
+      // covers the screen while the page swaps behind it, and is gone by the time the gallery pins (that's a
+      // resting point, so you never stop in half a cloud; on phones, where nothing pins, just past the heading).
+      ScrollTrigger.create({
+        trigger: ".work",
+        start: "top 170%",
+        end: () => (window.innerWidth >= 900 ? "top top" : "top -20%"),
+        invalidateOnRefresh: true,
+        onUpdate: (self) => (cloudPass.target = self.progress),
+        onLeave: () => (cloudPass.target = 1),
+        onLeaveBack: () => (cloudPass.target = 0),
+      });
+
       // ---------- Contact: giant "Say hi" rises and swells ----------
       gsap.fromTo(
         ".sayhi .char",
-        { yPercent: 140, rotate: 14, scale: 0.6 },
+        { yPercent: 150, rotate: 14, scale: 0.6 },
         {
           yPercent: 0,
           rotate: 0,
@@ -486,12 +530,11 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
       });
 
       return () => {
-        gsap.ticker.remove(onTick);
-        if (aboutTick) gsap.ticker.remove(aboutTick);
         aboutOffs.forEach((o) => o());
         cleanups.forEach((c) => c());
         io.disconnect();
         window.clearTimeout(buffer);
+        window.clearTimeout(starting);
         tilts.forEach((c) => c());
       };
     });
