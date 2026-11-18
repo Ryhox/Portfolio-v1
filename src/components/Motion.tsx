@@ -145,6 +145,7 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
       // rule draws across, its title rises, its words come up, and its capsules drop in one after another like
       // drops of glass landing (a soft pop each, on the way down).
       const reducedAll = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const coarseAll = window.matchMedia("(pointer: coarse)").matches;
       if (!reducedAll) {
         gsap
           .timeline({ scrollTrigger: { trigger: ".skills-heading", start: "top 96%", end: "top 52%", scrub: 1 } })
@@ -157,7 +158,9 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
               trigger: row,
               start: "top 94%",
               end: "top 46%",
-              scrub: 0.9,
+              // With a finger the page moves natively, so any catch-up reads as the capsules floating behind
+              // it: there they follow the scroll exactly.
+              scrub: coarseAll ? true : 0.9,
               onUpdate: (self) => {
                 // A pop for each capsule as it lands (only scrolling down, and not when flung far past).
                 const landed = Math.floor(Math.max(0, (self.progress - 0.38) / 0.62) * caps.length + 0.0001);
@@ -312,8 +315,19 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
           },
         });
 
-        // (The heading has no reveal of its own here: it forms in the sunbreak inside the clouds, exactly where
-        // it sits, and is handed over to this one as the clouds clear, CloudPass.tsx.)
+        // The heading belongs to the gallery and comes up with it: once the clouds' underside has cleared it
+        // (CloudPass.tsx), its letters rise out of their masks, scrubbed, done as the gallery pins.
+        gsap.fromTo(
+          ".work .work-heading .char",
+          { yPercent: 150, rotate: 10 },
+          {
+            yPercent: 0,
+            rotate: 0,
+            stagger: 0.04,
+            ease: "expo.out",
+            scrollTrigger: { trigger: ".work", start: "top 40%", end: "top top", scrub: 0.6 },
+          },
+        );
 
         gsap.utils.toArray<HTMLElement>(".panel").forEach((panel) => {
           const media = panel.querySelector(".panel-media");

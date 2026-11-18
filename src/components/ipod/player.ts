@@ -1,13 +1,15 @@
 // What's playing on the iPod: Apple Music's 30-second previews of the playlist, in a plain audio element,
 // with the real iPod's rules for skipping, shuffle and repeat.
 
-import { playlist, type PlaylistTrack } from "@/playlist";
+import { playlist, playlists, type PlaylistTrack } from "@/playlist";
 
 // preview / cover / link come from Apple (see lookup).
 export type Track = PlaylistTrack & { preview?: string; cover?: string; link?: string };
 
 export const songs: Track[] = playlist.map((t) => ({ ...t }));
 export const library = () => songs;
+// The Music menu's playlists, made of the same song objects (so Apple's previews and covers fill them too).
+export const lists = playlists.map((l) => ({ name: l.name, tracks: l.tracks.map((t) => songs[playlist.indexOf(t)]) }));
 
 export const player = {
   queue: [] as Track[],

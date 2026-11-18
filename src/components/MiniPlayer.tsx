@@ -78,9 +78,10 @@ export default function MiniPlayer() {
           <path d="M10.5 3h2v10h-2zM3 3.2v9.6L9.8 8z" fill="currentColor" />
         </svg>
       </button>
-      <button type="button" className="mp-close" onClick={stop} tabIndex={on ? 0 : -1} aria-label="Stop and close">
+      <span className="mp-rule" aria-hidden />
+      <button type="button" className="mp-btn mp-btn--small mp-close" onClick={stop} tabIndex={on ? 0 : -1} aria-label="Stop and close">
         <svg viewBox="0 0 16 16" aria-hidden>
-          <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </button>
       <span className="mp-line" aria-hidden>

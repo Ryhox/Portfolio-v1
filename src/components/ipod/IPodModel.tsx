@@ -94,6 +94,18 @@ export default function IPodModel({ open, onExpand, onLoaded }: { open: boolean;
     st.current.open = open;
     invalidate();
   }, [open, invalidate]);
+  // On phones it comes up in the middle of the screen, so there it faces you straight on.
+  const phone = useRef(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 899px)");
+    const sync = () => {
+      phone.current = mq.matches;
+      invalidate();
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [invalidate]);
 
   const screen = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -332,7 +344,7 @@ export default function IPodModel({ open, onExpand, onLoaded }: { open: boolean;
   useFrame((_, delta) => {
     const s = st.current;
     const dt = Math.min(delta, 1 / 30);
-    let moving = spring(s.yaw, s.open ? -0.34 : -0.16, dt, 90, 15);
+    let moving = spring(s.yaw, phone.current ? 0 : s.open ? -0.34 : -0.16, dt, 90, 15);
     if (turn.current) turn.current.rotation.y = s.yaw.x;
     // The hold switch slides over (and shows its orange).
     moving = spring(s.hold, ipod.os.hold ? 1 : 0, dt, 400, 24) || moving;

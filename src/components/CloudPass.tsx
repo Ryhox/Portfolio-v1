@@ -1,8 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { theme } from "@/lib/theme";
 
 // Where the flight through the clouds is, 0..1, set by the scroll (Motion.tsx): 0 before, 0.5 deep inside the
@@ -11,9 +10,8 @@ export const cloudPass = { target: 0 };
 
 // The way from About into the work: you fly through a bank of the sky's own clouds. Its sunlit top rises in
 // from the bottom of the screen (a hazier, farther layer leads in, slower), it swallows the screen while the
-// page swaps behind it and you push on through bright mist. Deep in it "SELECTED WORK" forms, letter by
-// letter, exactly where the gallery's heading sits. Then the bank's blue-grey underside
-// rises away around it and the gallery is there, its heading already in place. The bank rides with the
+// page swaps behind it and you push on through bright mist. Then the bank's blue-grey underside rises away
+// and the gallery is there (its heading rises in once the clouds have cleared it, Motion.tsx). The bank rides with the
 // scroll (faster than the page: it's close), so the same scroll always shows the same frame and scrolling
 // back flies you back. One small WebGL layer over the page, drawn at a fraction of the screen's resolution
 // (clouds are soft) and only while you're in it.
@@ -73,15 +71,17 @@ const fragment = `
 
   // One bank at screen point (x, sy) (sy from the top): colour and coverage. Its edges billow (pushed out
   // where the cloud is thick), lit like the sky's: sunlit tops, blue-grey bellies, bright mist deep inside.
-  vec4 bank(float x, float sy, vec2 edge, float scale, vec2 seed) {
+  // k: how much finer the billows are on a tall, narrow (phone) screen, so as many cross it as on a wide one
+  // and its edges stay crisp billows instead of a soft band of fog.
+  vec4 bank(float x, float sy, vec2 edge, float scale, vec2 seed, float k) {
     float y = sy - edge.x;
     float inside = min(y, edge.y - y);
     if (inside < -0.3) return vec4(0.0);
-    vec2 at = vec2(x, y) * scale + seed + vec2(uTime * 0.01, 0.0);
+    vec2 at = vec2(x, y) * scale * k + seed + vec2(uTime * 0.01, 0.0);
     float d = cloud(at);
-    float a = smoothstep(0.0, 0.18, inside + (d - 0.5) * 0.42);
+    float a = smoothstep(0.0, 0.18 / k, inside + (d - 0.5) * 0.42 / sqrt(k));
     if (a <= 0.0) return vec4(0.0);
-    float toward = cloud(at + vec2(0.05, -0.12));
+    float toward = cloud(at + vec2(0.05, -0.12) * k);
     float lit = 0.62 + (d - toward) * 2.6;
     lit = mix(lit, 0.9 + (d - 0.5) * 0.3, smoothstep(0.06, 0.5, inside));
     lit -= smoothstep(0.4, 0.0, edge.y - y) * 0.22;
@@ -97,12 +97,13 @@ const fragment = `
     float push = 1.0 + smoothstep(0.3, 0.75, uP) * 0.3;
     float x = (vUv.x - 0.5) * aspect / push;
     float sy = (0.5 - vUv.y) / push + 0.5;
+    float k = clamp(1.1 / aspect, 1.0, 2.2);
 
-    vec4 front = bank(x, sy, uFront, 1.5, vec2(3.1, 1.7));
+    vec4 front = bank(x, sy, uFront, 1.5, vec2(3.1, 1.7), k);
     vec4 back = vec4(0.0);
     if (front.a < 0.999) {
       // The farther layer: smaller billows, hazier, a little of the sky's blue in it.
-      back = bank(x, sy, uBack, 2.2, vec2(8.4, 5.2));
+      back = bank(x, sy, uBack, 2.2, vec2(8.4, 5.2), k);
       back.rgb = mix(back.rgb, mix(vec3(0.55, 0.72, 0.93), vec3(0.08, 0.13, 0.3), uNight), 0.3);
       back.a *= 0.55;
     }
@@ -113,7 +114,6 @@ const fragment = `
 
 export default function CloudPass() {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const title = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const cv = canvas.current;
@@ -148,38 +148,11 @@ export default function CloudPass() {
       back: gl.getUniformLocation(prog, "uBack"),
     };
 
-    // The title that forms in the mist: a copy of the gallery's heading in this layer, at exactly the spot
-    // the real one pins to (measured once per layout), so as the clouds clear the real heading takes over
-    // without a seam. Desktop only (on phones nothing pins, there's no handover).
-    const ghost = title.current;
-    const ghostChars = Array.from(ghost?.querySelectorAll<HTMLElement>(".char") ?? []);
-    const real = document.querySelector<HTMLElement>(".work .work-heading");
-    const geo = { x: 0, y: 0, w: 0, h: 0 };
-    const measure = () => {
-      const work = document.querySelector<HTMLElement>(".work");
-      if (!real || !work) return;
-      let x = 0;
-      let y = 0;
-      for (let n: HTMLElement | null = real; n && n !== work; n = n.offsetParent as HTMLElement | null) {
-        x += n.offsetLeft;
-        y += n.offsetTop;
-      }
-      Object.assign(geo, { x, y, w: real.offsetWidth, h: real.offsetHeight });
-    };
-    measure();
-    ScrollTrigger.addEventListener("refresh", measure);
-    let ghostOn = false;
-    const showGhost = (on: boolean) => {
-      if (on === ghostOn || !ghost || !real) return;
-      ghostOn = on;
-      ghost.style.visibility = on ? "visible" : "hidden";
-      real.style.visibility = on ? "hidden" : "";
-    };
-
-    // Clouds are soft: half the screen's pixels across is plenty (the browser smooths it up).
+    // Clouds are soft: half the screen's pixels across is plenty (the browser smooths it up). Phones get a
+    // little more (their screens are small, and a third was visibly mushy).
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     const resize = () => {
-      const k = coarse ? 0.35 : 0.5;
+      const k = coarse ? 0.6 : 0.5;
       cv.width = Math.max(2, Math.round(window.innerWidth * k));
       cv.height = Math.max(2, Math.round(window.innerHeight * k));
       gl.viewport(0, 0, cv.width, cv.height);
@@ -201,28 +174,12 @@ export default function CloudPass() {
         if (shown) {
           shown = false;
           cv.style.visibility = "hidden";
-          showGhost(false);
         }
         return;
       }
       if (!shown) {
         shown = true;
         cv.style.visibility = "visible";
-      }
-      // It forms where the heading ends up: its spot once the gallery has pinned (the end of this flight). The
-      // gallery scrolls up into place under it while the clouds clear, and the real heading arrives exactly
-      // beneath it for the handover.
-      showGhost(window.innerWidth >= 900 && cur > 0.4);
-      if (ghostOn && ghost) {
-        ghost.style.transform = `translate(${geo.x}px, ${geo.y}px)`;
-        // Its letters rise into place one after another as you push through the mist.
-        const f = Math.min(1, Math.max(0, (cur - 0.43) / 0.16));
-        const n = ghostChars.length;
-        ghostChars.forEach((c, i) => {
-          const k = Math.min(1, Math.max(0, (f - (i / n) * 0.5) / 0.5));
-          const e = 1 - Math.pow(1 - k, 3);
-          c.style.transform = `translateY(${(150 * (1 - e)).toFixed(1)}%) rotate(${(10 * (1 - e)).toFixed(2)}deg)`;
-        });
       }
       gl.uniform2f(u.res, cv.width, cv.height);
       gl.uniform1f(u.time, (performance.now() - t0) / 1000);
@@ -236,8 +193,6 @@ export default function CloudPass() {
     return () => {
       gsap.ticker.remove(tick);
       window.removeEventListener("resize", resize);
-      ScrollTrigger.removeEventListener("refresh", measure);
-      showGhost(false);
       // (The context isn't thrown away: a remount gets the same one back from the canvas.)
       gl.deleteBuffer(buf);
       gl.deleteProgram(prog);
@@ -245,25 +200,6 @@ export default function CloudPass() {
   }, []);
 
   return (
-    <>
-      <canvas ref={canvas} className="cloud-pass" aria-hidden />
-      {/* The gallery's heading, forming in the mist (same letters and styles as the real one). */}
-      <h2 ref={title} className="work-heading cloud-title" aria-hidden>
-        {["Selected", "work"].map((w, wi) => (
-          <Fragment key={w}>
-            {wi ? <br /> : null}
-            <span className="word">
-              {Array.from(w).map((c, i) => (
-                <span key={i} className="char-mask">
-                  <span className="char" data-c={c}>
-                    {c}
-                  </span>
-                </span>
-              ))}
-            </span>
-          </Fragment>
-        ))}
-      </h2>
-    </>
+    <canvas ref={canvas} className="cloud-pass" aria-hidden />
   );
 }

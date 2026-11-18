@@ -75,22 +75,21 @@ const viaApple = (fn: () => void) => {
   else push({ kind: "consent", then: fn });
 };
 
-// Music: what's playing (if anything), then the songs.
-const musicRows = (): Row[] => {
-  const lib = player.library();
-  return [
-    ...(player.current() ? [{ label: "Now Playing", more: true, go: () => ({ kind: "now" }) as View }] : []),
-    ...lib.map((t, i) => ({
-      label: t.title,
-      act: () =>
-        viaApple(() => {
-          player.player.shuffle = false;
-          player.play(lib, i);
-          nowPlaying();
-        }),
-    })),
-  ];
-};
+// Music: what's playing (if anything), then the playlists, each a menu of its songs.
+const songRows = (lib: player.Track[]): Row[] =>
+  lib.map((t, i) => ({
+    label: t.title,
+    act: () =>
+      viaApple(() => {
+        player.player.shuffle = false;
+        player.play(lib, i);
+        nowPlaying();
+      }),
+  }));
+const musicRows = (): Row[] => [
+  ...(player.current() ? [{ label: "Now Playing", more: true, go: () => ({ kind: "now" }) as View }] : []),
+  ...player.lists.map((l) => ({ label: l.name, more: true, go: () => menu(l.name, () => songRows(l.tracks)) })),
+];
 
 const contactRows = (): Row[] => [
   { label: "GitHub", more: true, act: () => window.open(links.github, "_blank", "noopener") },

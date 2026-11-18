@@ -92,6 +92,7 @@ export default function Stack() {
       const sy = gsap.quickTo(a, "scaleY", { duration: 0.5, ease: "elastic.out(1, 0.5)" });
       let pressed = false;
       const move = (e: PointerEvent) => {
+        if (e.pointerType === "touch") return;
         const r = a.getBoundingClientRect();
         const nx = (e.clientX - r.left) / r.width - 0.5;
         const ny = (e.clientY - r.top) / r.height - 0.5;
@@ -102,13 +103,19 @@ export default function Stack() {
         sx(1 + Math.abs(nx) * 0.06 - Math.abs(ny) * 0.02);
         sy(1 + Math.abs(ny) * 0.08 - Math.abs(nx) * 0.03);
       };
+      // A finger on a capsule is usually the start of a scroll, not a hover or a press: touches get none of
+      // that (no tick, no squeeze, no line swap, no spring back when the browser takes the scroll), and a
+      // tap that really lands gets a quick press instead (in up).
+      const touch = (e: PointerEvent) => e.pointerType === "touch";
       const enter = (e: PointerEvent) => {
+        if (touch(e)) return;
         a.style.setProperty("--hl", "1");
         sfx("tick", 0.9 + (i % 5) * 0.06);
         say(row, what);
         move(e);
       };
-      const leave = () => {
+      const leave = (e?: Event) => {
+        if (e instanceof PointerEvent && touch(e)) return;
         a.style.setProperty("--hl", "0");
         a.style.removeProperty("--la");
         pressed = false;
@@ -119,7 +126,8 @@ export default function Stack() {
         sx(1);
         sy(1);
       };
-      const down = () => {
+      const down = (e: PointerEvent) => {
+        if (touch(e)) return;
         pressed = true;
         a.style.setProperty("--hl", "2");
         sfx("press");
@@ -127,7 +135,13 @@ export default function Stack() {
         sx(0.95);
         sy(0.95);
       };
-      const up = () => {
+      const up = (e: PointerEvent) => {
+        if (touch(e)) {
+          sfx("tink", 1 + (i % 4) * 0.08);
+          if (reduced) return;
+          gsap.fromTo(a, { scaleX: 0.95, scaleY: 0.95 }, { scaleX: 1, scaleY: 1, duration: 0.45, ease: "elastic.out(1, 0.5)", overwrite: "auto" });
+          return;
+        }
         if (!pressed) return;
         pressed = false;
         a.style.setProperty("--hl", fine ? "1" : "0");
