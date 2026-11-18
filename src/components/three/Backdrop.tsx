@@ -60,9 +60,27 @@ const fragment = /* glsl */ `
     p += dot(p, p + 45.32);
     return fract(p.x * p.y);
   }
+  // Value noise: random values on a square grid, blended. Cheap, and right for a big screen, but its
+  // contours follow the grid, so a narrow phone screen (a few big cells across) shows clouds with straight
+  // edges, squares and triangles. Phones get gradient noise instead (a random slope at each grid point),
+  // whose contours are round; scaled to the same spread, so the sky has as much cloud.
+  vec2 slope(vec2 i) {
+    // (Each grid point wrapped into a small range first: further down the page the coordinates get big,
+    // and some phone GPUs lose the precision the hash needs there.)
+    i = mod(i, 289.0);
+    return vec2(hash(i), hash(i + vec2(31.7, 17.3))) * 2.0 - 1.0;
+  }
   float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
+    if (uPhone > 0.5) {
+      vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+      float a = dot(slope(i), f);
+      float b = dot(slope(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0));
+      float c = dot(slope(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0));
+      float d = dot(slope(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0));
+      return clamp(0.5 + 1.5 * mix(mix(a, b, u.x), mix(c, d, u.x), u.y), 0.0, 1.0);
+    }
     f = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
   }
@@ -223,9 +241,9 @@ const fragment = /* glsl */ `
       // Anti-aliased over about a pixel at the rim; inside, only the glass is drawn.
       float cover = clamp(0.5 - gd, 0.0, 1.0) * ga;
       vec3 glass = glassAt(px, gc, gd);
-      col = cover < 1.0 ? mix(skyAt(uv, uPhone > 0.5 ? 4 : 5, uPhone * 0.3), glass, cover) : glass;
+      col = cover < 1.0 ? mix(skyAt(uv, uPhone > 0.5 ? 4 : 5, uPhone * 0.1), glass, cover) : glass;
     } else {
-      col = skyAt(uv, uPhone > 0.5 ? 4 : 5, uPhone * 0.3);
+      col = skyAt(uv, uPhone > 0.5 ? 4 : 5, uPhone * 0.1);
     }
 
     // The hill the page ends on. It rises with the last screen (its foot is the floor the footer sits on).
