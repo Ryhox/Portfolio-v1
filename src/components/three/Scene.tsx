@@ -57,7 +57,8 @@ export default function Scene({
       frameloop="never"
       flat
       // Soft clouds don't need every device pixel.
-      dpr={COARSE ? [0.75, 1] : 1}
+      // (Phones a little more than one per CSS pixel: their screens are small and at 0.75 the cloud edges smeared.)
+      dpr={COARSE ? [1, 1.25] : 1}
       gl={{ antialias: false, powerPreference: "high-performance" }}
     >
       {/* While the loader is up, only tick a few times a second (compile), then full rate. */}

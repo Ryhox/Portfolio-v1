@@ -9,7 +9,7 @@ import ActionFx from "./ActionFx";
 import IPod from "./IPod";
 import CloudPass from "./CloudPass";
 import MiniPlayer from "./MiniPlayer";
-import TerrainDebug from "./stage/TerrainDebug";
+import TabTitle from "./TabTitle";
 import { intro } from "@/lib/intro";
 
 const Scene = dynamic(() => import("./three/Scene"), { ssr: false });
@@ -22,8 +22,6 @@ export default function Experience({ children }: { children: ReactNode }) {
   const loader = useRef<HTMLDivElement>(null);
   const count = useRef<HTMLSpanElement>(null);
   const [sceneReady, setSceneReady] = useState(false);
-  // (The cat's stage is off for now, so there's nothing of it to wait for.)
-  const stageReady = true;
   const [revealed, setRevealed] = useState(false);
   // Scroll choreography is built while the loader is still up (not at the reveal, which must stay smooth).
   const [motionSetup, setMotionSetup] = useState(false);
@@ -44,16 +42,6 @@ export default function Experience({ children }: { children: ReactNode }) {
   const onProgress = useCallback((p: number) => {
     // Assets are most of the wait; shader compilation finishes the last stretch.
     progress.current.target = Math.max(progress.current.target, 8 + p * 0.8);
-  }, []);
-
-  // The tab misses you when you leave.
-  useEffect(() => {
-    const title = document.title;
-    const onVisibility = () => {
-      document.title = document.hidden ? "come back ↩ ryhox.dev" : title;
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
   useEffect(() => {
@@ -98,7 +86,6 @@ export default function Experience({ children }: { children: ReactNode }) {
       gsap.fromTo(".scene", { scale: 1.12 }, { scale: 1, duration: 1.8, ease: "expo.out", clearProps: "transform" });
       gsap.from(".nav > *", { yPercent: -160, autoAlpha: 0, duration: 1, stagger: 0.08, ease: "expo.out", delay: 0.45 });
       gsap.fromTo(".hero-title .char", { yPercent: 150, rotate: 10 }, { yPercent: 0, rotate: 0, duration: 1.3, stagger: 0.07, ease: "expo.out", delay: 0.2 });
-      gsap.from(".hero-role", { y: 24, autoAlpha: 0, duration: 1.1, ease: "expo.out", delay: 0.6 });
     };
 
     const tl = gsap.timeline({ delay: wait });
@@ -131,14 +118,14 @@ export default function Experience({ children }: { children: ReactNode }) {
     <>
       <div ref={root} className={revealed ? "app is-ready" : "app"}>
         <SmoothScroll />
-        <Motion ready={sceneReady && stageReady} onReady={onMotionReady} />
+        <Motion ready={sceneReady} onReady={onMotionReady} />
         <ActionFx ready={motionSetup} />
-        <TerrainDebug />
         <div className="scene" aria-hidden>
           <Scene eventSource={root} onReady={onSceneReady} onProgress={onProgress} />
         </div>
         {/* The flight through the clouds between About and the work (over the page, under the nav). */}
         <CloudPass />
+        <TabTitle />
         <div className="progress" aria-hidden>
           <div className="progress-fill" />
         </div>

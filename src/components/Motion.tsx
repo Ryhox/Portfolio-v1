@@ -4,17 +4,12 @@ import { useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { scroll, sky } from "@/lib/scroll";
-import { stage } from "@/lib/stage";
-import { intro } from "@/lib/intro";
 import Snap from "lenis/snap";
 import { lenis } from "./SmoothScroll";
 import { cloudPass } from "./CloudPass";
 import { sfx } from "./ipod/clicker";
 
 gsap.registerPlugin(ScrollTrigger);
-
-// How far down the "o" glyph box its top edge sits (the box has room above the caps for the reveal).
-const PERCH_TOP = 0.24;
 
 // All scroll choreography for the DOM layer. Runs once `ready` flips (after the preloader).
 export default function Motion({ ready, onReady }: { ready: boolean; onReady?: () => void }) {
@@ -199,37 +194,6 @@ export default function Motion({ ready, onReady }: { ready: boolean; onReady?: (
         onLeave: () => (sky.dense = 0),
         onLeaveBack: () => (sky.dense = 0),
       });
-
-      // ---------- Hero: the cat's perch is the top of the "o" in the name ----------
-      // Only while the cat's stage is on the page: measuring the letter every frame forces the browser to lay
-      // the page out again mid-frame, which is pure cost when nobody stands on it.
-      const perchEl = document.querySelector(".stage-canvas") ? document.querySelector<HTMLElement>("[data-perch] .char") : null;
-      let perchAt = 0;
-      const perchTick = () => {
-        const p = stage.perch;
-        if (!perchEl) return;
-        const r = perchEl.getBoundingClientRect();
-        const now = performance.now() / 1000;
-        const dt = perchAt ? Math.min(0.1, now - perchAt) : 0;
-        perchAt = now;
-        // The glyph's top edge sits a fixed fraction down its box (the box has room above the caps).
-        const x = r.left + r.width / 2;
-        const y = r.top + r.height * PERCH_TOP;
-        if (dt > 0) {
-          p.vx = (x - p.x) / dt;
-          p.vy = (y - p.y) / dt;
-        }
-        p.x = x;
-        p.y = y;
-        // Only once the name has risen into place, and while it's on screen.
-        p.valid = now - intro.at > 1.6 && r.bottom > 0 && r.top < window.innerHeight * 0.92;
-      };
-      if (perchEl) gsap.ticker.add(perchTick);
-      aboutOffs.push(() => {
-        gsap.ticker.remove(perchTick);
-        stage.perch.valid = false;
-      });
-
 
       // "Seen in" links fly to the project, wherever it sits in the (sideways) gallery.
       const gotoProject = (e: Event) => {

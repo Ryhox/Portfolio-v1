@@ -97,7 +97,7 @@ const jsonLd = {
       "@id": "https://ryhox.dev/#website",
       url: "https://ryhox.dev",
       name: "ryhox",
-      description: "Portfolio of ryhox, a creative developer building playful 3D things for the web.",
+      description: "Portfolio of ryhox, who builds playful 3D things for the web.",
       inLanguage: "en",
       publisher: { "@id": "https://ryhox.dev/#person" },
     },
@@ -106,7 +106,6 @@ const jsonLd = {
       "@id": "https://ryhox.dev/#person",
       name: "ryhox",
       url: "https://ryhox.dev",
-      jobTitle: profile.role,
       sameAs: [github.href],
       knowsAbout: ["Three.js", "WebGL", "React Three Fiber", "GLSL", "Next.js", "React", "TypeScript", "JavaScript", "Node.js", "PostgreSQL", "MySQL", "Flutter", "Dart", "Java", "Kotlin", "C#", "Arduino", "GSAP", "Creative coding", "Minecraft modding"],
     },
@@ -159,15 +158,13 @@ export default function Home() {
 
       <main>
         <section id="top" className="hero" data-section="hero">
-          {/* The name, flat and big (the cat sits on its "o"). */}
+          {/* The name, flat and big. */}
           <div className="hero-frame">
             <h1 className="hero-title">
-              <span className="sr-only">
-                {profile.handle} — {profile.role}
-              </span>
+              <span className="sr-only">{profile.handle}</span>
               <span className="hero-word" aria-hidden>
                 {Array.from(profile.handle).map((c, i) => (
-                  <span key={i} className="char-mask" data-perch={i === 3 ? "" : undefined}>
+                  <span key={i} className="char-mask">
                     <span className="char" data-c={c}>
                       {c}
                     </span>
@@ -175,7 +172,6 @@ export default function Home() {
                 ))}
               </span>
             </h1>
-            <p className="hero-role">{profile.role}</p>
           </div>
           <div className="scroll-cue" aria-hidden>
             <span className="scroll-cue-text">
@@ -297,7 +293,7 @@ export default function Home() {
             ))}
           </ul>
           {/* Open air above the meadow: the cat's playground at the end of the page. */}
-          <div className="garden" aria-hidden />
+          <div className="contact-air" aria-hidden />
           {/* The floor of the whole page: the foot of the green hill (drawn in Backdrop.tsx). */}
           <div className="ground">
             <footer className="footer">

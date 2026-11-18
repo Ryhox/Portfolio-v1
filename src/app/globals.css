@@ -22,20 +22,6 @@
 
   /* Y2K chrome: icy silver, a bright horizon band, a navy edge and a wet highlight. */
   --chrome: linear-gradient(180deg, #ffffff 0%, #eef6fd 14%, #d5e5f4 38%, #a7bbd2 50%, #cde3f3 64%, #eef6fd 82%, #ffffff 100%);
-  /* Chrome lettering: pale sky reflected on top, a hard dark horizon, an iridescent ground below. */
-  --chrome-text: linear-gradient(
-    180deg,
-    #ffffff 4%,
-    #e8f5ff 20%,
-    #a9d4fb 42%,
-    #f4fbff 48.5%,
-    #34427a 49.5%,
-    #6a6fb8 55%,
-    #9fcdf5 68%,
-    #dcefff 82%,
-    #f7fbff 96%
-  );
-  --chrome-edge: #26396e;
   /* Ice, for the headlines: white with pale-blue streaks across each letter. */
   --pearl: linear-gradient(100deg, #ffffff 0%, #d6edff 15%, #ffffff 29%, #bfe1ff 43%, #e8f5ff 57%, #ffffff 69%, #b3dbff 84%, #e6f4ff 100%);
   --chrome-ring:
@@ -225,9 +211,15 @@ img {
 
 /* ---------- 3D layer + preloader ---------- */
 
+/* Sized to the large viewport (as tall as the screen gets with the browser's bars tucked away), so on phones
+   the bars sliding in and out never uncover the page behind it or make it re-render at a new size. */
 .scene {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: 100lvh;
   z-index: 0;
   pointer-events: none;
   /* The sky in CSS until the WebGL sky has drawn its first frame. */
@@ -277,24 +269,6 @@ main {
   font-size: clamp(0.8rem, 1.2vw, 0.95rem);
   letter-spacing: 0.2em;
   color: var(--ink-soft);
-}
-
-/* ---------- Stage (the cat's layer above the page) ---------- */
-
-.stage {
-  position: fixed;
-  inset: 0;
-  z-index: 15;
-  pointer-events: none;
-}
-
-/* Surfaces the cat stands on give way under its weight (animated from JS). Only while its stage is on: on
-   every letter and picture all the time, it was ~140 extra moving parts for the browser to track each frame. */
-.stage-on .statement .w,
-.stage-on .char-mask,
-.stage-on .panel-media,
-.stage-on .more-icon {
-  translate: 0 var(--dip, 0px);
 }
 
 /* ---------- Roll hover ---------- */
@@ -509,7 +483,7 @@ main {
   height: 150svh;
 }
 
-/* The name holds the screen for a moment, then scrolls away (the cat sits on its "o"). */
+/* The name holds the screen for a moment, then scrolls away. */
 /* (Its own layer, so sticking while you scroll is the compositor's job, not a repaint each frame.) */
 .hero-frame {
   will-change: transform;
@@ -532,16 +506,6 @@ main {
 
 .hero-word {
   display: inline-flex;
-}
-
-.hero-role {
-  margin-top: clamp(1rem, 3svh, 2rem);
-  font-family: var(--font-ui), sans-serif;
-  font-weight: 800;
-  font-size: clamp(0.78rem, 1.05vw, 1rem);
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--ink);
 }
 
 /* Scroll cue: small caps whose letters roll over in a wave, over a hairline that fills and empties. */
@@ -850,6 +814,33 @@ main {
   box-shadow: 0 18px 30px -20px rgb(4 24 70 / calc(0.45 + var(--night) * 0.3));
 }
 
+/* On touch screens the page scrolls on its own, ahead of anything WebGL draws, so glass drawn by the sky
+   would trail behind its capsule. There the capsule is its own glass: the sky behind it frosted and lifted,
+   a bright rim along the top, a softer one along the bottom, light pooling in the lower half. */
+@media (pointer: coarse) {
+  .cap {
+    /* (will-change: opacity would cut the capsule off from the sky it frosts.) */
+    will-change: transform;
+  }
+
+  .glass-cap {
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / calc(0.4 - var(--night) * 0.3)) 0%,
+      rgb(255 255 255 / calc(0.12 - var(--night) * 0.07)) 52%,
+      rgb(255 255 255 / calc(0.24 - var(--night) * 0.16)) 100%
+    );
+    -webkit-backdrop-filter: blur(7px) saturate(1.15) brightness(1.05);
+    backdrop-filter: blur(7px) saturate(1.15) brightness(1.05);
+    box-shadow:
+      inset 0 1.5px 0.5px -0.5px rgb(255 255 255 / calc(0.95 - var(--night) * 0.5)),
+      inset 0 -1px 0.5px rgb(255 255 255 / calc(0.5 - var(--night) * 0.3)),
+      inset 0 0 0 1px rgb(255 255 255 / calc(0.3 - var(--night) * 0.18)),
+      inset 0 -12px 16px -12px rgb(255 255 255 / calc(0.6 - var(--night) * 0.4)),
+      0 18px 30px -20px rgb(4 24 70 / calc(0.45 + var(--night) * 0.3));
+  }
+}
+
 .glass-cap:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 5px;
@@ -896,10 +887,12 @@ main {
 /* The flight through the clouds between About and the work (CloudPass.tsx). */
 .cloud-pass {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 16;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100lvh;
   visibility: hidden;
   pointer-events: none;
 }
@@ -994,7 +987,7 @@ main {
   gap: 13vw;
   height: 100%;
   width: max-content;
-  /* Headroom above the images: the cat rides on top of them. */
+  /* Headroom above the images, under the nav. */
   padding: 14svh 12vw 0 var(--gutter);
   will-change: transform;
 }
@@ -1667,13 +1660,13 @@ main {
   text-decoration-color: var(--accent);
 }
 
-/* "And much more" — the last stop of the gallery. */
+/* "And much more": the last stop of the gallery. */
 .panel-more {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  /* Leaves room for the cat, which likes to stand on the GitHub mark. */
+  /* Plenty of sky between the title and the GitHub mark. */
   gap: max(15svh, 130px);
   padding-right: 6vw;
 }
@@ -1717,8 +1710,8 @@ main {
 
 /* ---------- Contact ---------- */
 
-/* The last screen is one composed frame: SAY HI, the links, the bubble garden, and the meadow the whole
-   page comes to rest on. */
+/* The last screen is one composed frame: SAY HI, the links, open sky, and the hill the whole page comes to
+   rest on. */
 .contact {
   position: relative;
   min-height: 100svh;
@@ -1765,8 +1758,8 @@ main {
   letter-spacing: -0.01em;
 }
 
-/* Open air below the links: the cat's playground. */
-.garden {
+/* Open sky between the links and the hill. */
+.contact-air {
   width: 100%;
   flex: 1 1 auto;
   min-height: max(24svh, 190px);

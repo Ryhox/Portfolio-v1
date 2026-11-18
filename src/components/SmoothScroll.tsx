@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { afterScroll, measureSections, scroll } from "@/lib/scroll";
+import { measureSections, scroll } from "@/lib/scroll";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,11 +35,54 @@ export default function SmoothScroll() {
     const fill = document.querySelector<HTMLElement>(".progress-fill");
     const cue = document.querySelector<HTMLElement>(".scroll-cue");
     let cueAt = "";
+
+    // ---------- Resizing: live, and you stay where you were ----------
+    // Where you are is kept as a place in the page (which section, how far into it), not as pixels: when
+    // the window changes size the gallery's pinned stretch changes length (and crossing the phone breakpoint
+    // rebuilds every animation, during which ScrollTrigger measures from the top and used to leave you
+    // there). After every re-measure the page goes straight back to that same place.
+    type Box = { top: number; h: number };
+    let boxes: Box[] = [];
+    const layout = () => {
+      boxes = Array.from(document.querySelectorAll<HTMLElement>("[data-section]")).map((el) => {
+        const box = el.parentElement?.classList.contains("pin-spacer") ? el.parentElement : el;
+        return { top: box.getBoundingClientRect().top + window.scrollY, h: Math.max(1, box.offsetHeight) };
+      });
+    };
+    const toPlace = (y: number) => {
+      let i = 0;
+      while (i + 1 < boxes.length && boxes[i + 1].top <= y) i++;
+      const b = boxes[i];
+      return b ? { i, f: (y - b.top) / b.h } : null;
+    };
+    let place: { i: number; f: number } | null = null;
+    // While a resize is under way the place stays as it was before it (the scroll jumps around meanwhile).
+    let holding = false;
+    let lastW = window.innerWidth;
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    let liveAt = 0;
+    let liveRaf = 0;
+    const onResize = () => {
+      // Phones resize for every move of the browser's bars: only a change of width is a real resize there.
+      if (coarse && window.innerWidth === lastW) return;
+      lastW = window.innerWidth;
+      holding = true;
+      // Re-measure while the window is being dragged (a few times a second), not only once it's let go.
+      if (liveRaf) return;
+      liveRaf = requestAnimationFrame(() => {
+        liveRaf = 0;
+        const now = performance.now();
+        if (now - liveAt < 110) return;
+        liveAt = now;
+        ScrollTrigger.refresh();
+      });
+    };
+    window.addEventListener("resize", onResize);
+
     instance.on("scroll", (l: Lenis) => {
+      if (!holding) place = toPlace(l.scroll);
       scroll.y = l.scroll;
       scroll.velocity = l.velocity;
-      scroll.progress = l.progress;
-      scroll.s = l.progress * 3;
       // Read before anything below writes a style: ScrollTrigger reads the scroll position, and after a style
       // write that read makes the browser recalculate the page's styles on the spot.
       ScrollTrigger.update();
@@ -58,10 +101,7 @@ export default function SmoothScroll() {
     // One clock for Lenis + GSAP so pinned/scrubbed animations never drift from the scroll. First in the
     // frame (before GSAP renders its tweens): ScrollTrigger reads the scroll position right here, and read
     // after the tweens have written their styles that read forces a full style + layout pass every frame.
-    const tick = (time: number, deltaMs: number) => {
-      instance.raf(time * 1000);
-      afterScroll.forEach((fn) => fn(time, deltaMs));
-    };
+    const tick = (time: number) => instance.raf(time * 1000);
     gsap.ticker.add(tick, false, true);
     gsap.ticker.lagSmoothing(0);
 
@@ -80,13 +120,27 @@ export default function SmoothScroll() {
     };
     document.addEventListener("click", onClick);
 
-    const onRefresh = () => measureSections();
+    const onRefresh = () => {
+      layout();
+      if (holding && place && boxes[place.i]) {
+        const b = boxes[place.i];
+        instance.resize();
+        instance.scrollTo(Math.max(0, Math.min(instance.limit, b.top + place.f * b.h)), { immediate: true, force: true });
+        ScrollTrigger.update();
+        // Let go once the resizing has stopped (the last re-measure has run).
+        requestAnimationFrame(() => (holding = !!liveRaf));
+      }
+      measureSections();
+    };
     ScrollTrigger.addEventListener("refresh", onRefresh);
+    layout();
     measureSections();
 
     return () => {
       gsap.ticker.remove(tick);
       document.removeEventListener("click", onClick);
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(liveRaf);
       ScrollTrigger.removeEventListener("refresh", onRefresh);
       instance.destroy();
       lenis = null;

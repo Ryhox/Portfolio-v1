@@ -151,14 +151,20 @@ export default function CloudPass() {
     // Clouds are soft: half the screen's pixels across is plenty (the browser smooths it up). Phones get a
     // little more (their screens are small, and a third was visibly mushy).
     const coarse = window.matchMedia("(pointer: coarse)").matches;
+    // From its own box (the large viewport, CSS), and only when that really changes: phones fire resize for
+    // every move of the browser's bars, and resizing a canvas wipes it.
     const resize = () => {
       const k = coarse ? 0.6 : 0.5;
-      cv.width = Math.max(2, Math.round(window.innerWidth * k));
-      cv.height = Math.max(2, Math.round(window.innerHeight * k));
-      gl.viewport(0, 0, cv.width, cv.height);
+      const w = Math.max(2, Math.round((cv.clientWidth || window.innerWidth) * k));
+      const h = Math.max(2, Math.round((cv.clientHeight || window.innerHeight) * k));
+      if (w === cv.width && h === cv.height) return;
+      cv.width = w;
+      cv.height = h;
+      gl.viewport(0, 0, w, h);
     };
     resize();
-    window.addEventListener("resize", resize);
+    const ro = new ResizeObserver(resize);
+    ro.observe(cv);
 
     let cur = 0;
     let shown = false;
@@ -192,7 +198,7 @@ export default function CloudPass() {
     gsap.ticker.add(tick);
     return () => {
       gsap.ticker.remove(tick);
-      window.removeEventListener("resize", resize);
+      ro.disconnect();
       // (The context isn't thrown away: a remount gets the same one back from the canvas.)
       gl.deleteBuffer(buf);
       gl.deleteProgram(prog);

@@ -2,7 +2,6 @@ import { links, type ProjectLinks } from "./links";
 
 export const profile = {
   handle: "ryhox",
-  role: "Creative developer",
   // The About headline ("==words==" get the highlighter).
   statement: "I build ==playful, tactile== things for the web.",
   note: "Open for freelance, collabs and weird ideas.",
@@ -56,7 +55,7 @@ export const projects: Project[] = [
         "    const seed = hashLogin(login.toLowerCase())",
         "    const rng = mulberry32(seed)",
         "    // Three permanent rolls from the username hash: theme (group), the look",
-        "    // within it, and the size tier. Order matters — keep it stable.",
+        "    // within it, and the size tier. Order matters, keep it stable.",
         "    let theme = pickWeighted(THEMES, rng)",
         "    let biome = pickWeighted(theme.variants, rng)",
         "    let size = pickWeighted(SIZE_TIERS, rng)",

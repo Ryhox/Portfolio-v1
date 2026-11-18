@@ -110,7 +110,7 @@ const fragment = /* glsl */ `
   // a little left of centre, then one long slope down to the horizon on the right.
   float ridge(float X) {
     float s = X < 0.3 ? 0.78 : 0.5;
-    return 0.04 + 0.3 * exp(-pow((X - 0.3) / s, 2.0));
+    return 0.04 + 0.22 * exp(-pow((X - 0.3) / s, 2.0));
   }
   // Far blue hills, just peeking over the horizon at the right where the slope runs out.
   float ridgeFar(float X) {
@@ -138,9 +138,12 @@ const fragment = /* glsl */ `
     // Two layers of cloud, wide and puffy, clear near the horizon and building up higher. They rise as
     // you scroll down (parallax) and drift across on their own, the near layer faster. The far layer is
     // smaller, fainter and takes on the sky's blue (air in between).
+    // On a tall, narrow (phone) screen the clouds are drawn finer, so as many cross it as cross a wide one
+    // (sized to the height alone, it only ever showed a blurry slice of one).
     float t = uTime;
-    vec2 far = vec2(q.x * 0.75 + t * 0.005, q.y * 1.25 - uScroll * 0.2) * 2.4;
-    vec2 near = vec2(q.x * 0.6 + t * 0.011 + 7.3, q.y - uScroll * 0.5 + 2.1) * 1.35;
+    float k = clamp(0.95 / aspect, 1.0, 1.9);
+    vec2 far = vec2(q.x * 0.75 + t * 0.005, q.y * 1.25 - uScroll * 0.2) * 2.4 * k;
+    vec2 near = vec2(q.x * 0.6 + t * 0.011 + 7.3, q.y - uScroll * 0.5 + 2.1) * 1.35 * k;
     // Behind the tech stack, as much cloud low down as up high (the same amount the top of the sky has).
     // Over the hill at the end, a few more fair-weather clouds up high.
     float end = smoothstep(1.8, 1.0, uFloor / uRes.y);
@@ -157,7 +160,7 @@ const fragment = /* glsl */ `
     if (uFloor < uRes.y * 1.8) {
       float hz = (uFloor - 0.09 * uRes.y) / uRes.y - (1.0 - uv.y);
       float band = smoothstep(-0.01, 0.025, hz) * smoothstep(0.2, 0.06, hz);
-      vec2 hp = vec2(q.x * 3.2 + t * 0.006 + 3.0, hz * 7.0 + 1.3);
+      vec2 hp = vec2(q.x * 3.2 * k + t * 0.006 + 3.0, hz * 7.0 + 1.3);
       vec2 ch = cumulus(hp, 0.58 * band * smoothstep(0.35, 0.8, uv.x), 1, n, frost);
       vec3 cloudLow = mix(mix(belly, sunlit, 0.4 + 0.6 * ch.y), mix(vec3(0.05, 0.08, 0.2), vec3(0.3, 0.36, 0.6), ch.y), night);
       col = mix(col, cloudLow, ch.x * mix(0.97, 0.45, night));
@@ -227,17 +230,20 @@ const fragment = /* glsl */ `
     float y = (1.0 - uv.y) * uRes.y;
     float x = uv.x * uRes.x;
     float H = uRes.y;
+    // The hill's size goes by the screen's width (capped by its height), so on a tall, narrow phone it's
+    // the same gentle swell as on a wide screen rather than a mountain up to the middle of it.
+    float U = min(H, uRes.x * 0.8);
     float X = uv.x;
     if (uFloor < H * 1.8) {
       // (Just a breath of unevenness along the crest: it's a smooth, rolling hill.)
-      float wob = (fbm(vec2(X * 4.0, 3.0)) - 0.5) * H * 0.004;
-      float farTop = uFloor - ridgeFar(X) * H + (fbm(vec2(X * 22.0, 7.0)) - 0.5) * H * 0.012;
-      float nearTop = uFloor - ridge(X) * H + wob;
+      float wob = (fbm(vec2(X * 4.0, 3.0)) - 0.5) * U * 0.004;
+      float farTop = uFloor - ridgeFar(X) * U + (fbm(vec2(X * 22.0, 7.0)) - 0.5) * U * 0.012;
+      float nearTop = uFloor - ridge(X) * U + wob;
 
       // The far hills: blue-violet in the haze.
       float farA = smoothstep(farTop - 1.2, farTop + 1.2, y);
       if (farA > 0.0) {
-        float fd = clamp((y - farTop) / (H * 0.05), 0.0, 1.0);
+        float fd = clamp((y - farTop) / (U * 0.05), 0.0, 1.0);
         vec3 farDay = mix(mix(vec3(0.46, 0.52, 0.72), vec3(0.36, 0.44, 0.62), fd), uLow, 0.35);
         vec3 farNight = mix(vec3(0.05, 0.08, 0.16), vec3(0.03, 0.06, 0.12), fd);
         col = mix(col, mix(farDay, farNight, night), farA);
@@ -247,13 +253,16 @@ const fragment = /* glsl */ `
       // over it.
       float nearA = smoothstep(nearTop - 1.2, nearTop + 1.2, y);
       if (nearA > 0.0) {
-        float d = (y - nearTop) / H;
+        float d = (y - nearTop) / U;
         float slope = (ridge(X - 0.01) - ridge(X + 0.01)) * 50.0;
         float lit = clamp(0.55 + slope * 1.8, 0.0, 1.0);
         // Ground coordinates: wide across, squeezed toward the crest (it's farther away up there).
         vec2 g = vec2(X * aspect * 7.0, log(1.0 + d * 30.0) * 5.0);
         float patches = fbm(g * 0.6 + 2.0);
-        float blades = noise(vec2(x * 0.9, y * 0.18)) * 0.5 + noise(vec2(x * 0.35, y * 0.07)) * 0.5;
+        // Grass blades: tied to the hill (they scroll with it, not stuck on the screen), and coarse enough
+        // that they never shimmer into a grain like dust on the glass.
+        float yh = y - uFloor;
+        float blades = noise(vec2(x * 0.42, yh * 0.085)) * 0.55 + noise(vec2(x * 0.16, yh * 0.032)) * 0.45;
         // Wind: a faint breeze across the grass. Cloud shadows: big, soft, darker sweeps drifting over it.
         float wind = sin(g.x * 1.3 - g.y * 0.9 - t * 1.4 + patches * 5.0) * 0.5 + 0.5;
         float shade = smoothstep(0.46, 0.7, fbm(vec2(g.x * 0.11 + t * 0.02, g.y * 0.28)));
@@ -380,7 +389,7 @@ export default function Backdrop() {
     uniforms.uLow.value.lerp(pal[2], k);
     uniforms.uTime.value = state.clock.elapsedTime;
     uniforms.uScroll.value = scroll.y / Math.max(1, scroll.vh);
-    // Day ↔ night eases over about a second when the theme flips (the grass on the stage follows it).
+    // Day and night ease into each other over about a second when the theme flips.
     const night = currentTheme() === "dark" ? 1 : 0;
     uniforms.uNight.value += (night - uniforms.uNight.value) * (1 - Math.exp(-4 * Math.min(dt, 1 / 30)));
     theme.night = uniforms.uNight.value;

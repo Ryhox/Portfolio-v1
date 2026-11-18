@@ -32,7 +32,8 @@ export default function Stack() {
   useEffect(() => {
     const el = root.current;
     if (!el) return;
-    sky.glass = Array.from(el.querySelectorAll<HTMLElement>(".glass-cap"));
+    // (Not on touch screens: there the capsules are their own glass, CSS, so they can't trail the scroll.)
+    sky.glass = window.matchMedia("(pointer: coarse)").matches ? [] : Array.from(el.querySelectorAll<HTMLElement>(".glass-cap"));
     // Each time it comes near (and whenever it changes size) the sky measures where the capsules sit, once.
     const io = new IntersectionObserver(
       ([e]) => {

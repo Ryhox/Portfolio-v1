@@ -22,13 +22,13 @@ const sans = Manrope({
 });
 
 const SITE = "https://ryhox.dev";
-const TITLE = "ryhox | Creative developer";
+const TITLE = "ryhox";
 const DESCRIPTION =
-  "ryhox is a creative developer building playful, tactile things for the web: interactive Three.js worlds, WebGL experiments, apps people use every day and Minecraft mods. Comes with a working iPod.";
+  "ryhox builds playful, tactile things for the web: interactive Three.js worlds, WebGL experiments, apps people use every day and Minecraft mods. Comes with a working iPod.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: { default: TITLE, template: "%s | ryhox" },
+  title: { default: TITLE, template: "ryhox » %s" },
   description: DESCRIPTION,
   applicationName: "ryhox",
   authors: [{ name: "ryhox", url: "https://github.com/Ryhox" }],
@@ -36,7 +36,6 @@ export const metadata: Metadata = {
   publisher: "ryhox",
   keywords: [
     "ryhox",
-    "creative developer",
     "creative coding",
     "three.js portfolio",
     "3d portfolio",

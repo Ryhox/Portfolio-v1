@@ -15,7 +15,7 @@ export default function NotFound() {
         ryhox
       </Link>
       <h1 className="nf-code" data-c="404">
-        404<span className="sr-only"> — page not found</span>
+        404<span className="sr-only">: page not found</span>
       </h1>
       <p className="nf-title">This page drifted off.</p>
       <p className="nf-sub">Like a cloud, it was here a second ago.</p>

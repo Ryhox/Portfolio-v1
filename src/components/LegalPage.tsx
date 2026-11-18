@@ -11,7 +11,7 @@ export default function LegalPage({ title, lead, updated, children }: { title: s
           ryhox
         </Link>
         <Link href="/" className="legal-back nav-pill">
-          ← Back
+          Back
         </Link>
       </header>
       <article className="folder">

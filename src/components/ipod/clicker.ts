@@ -1,5 +1,5 @@
 // The site's little sounds, all made in WebAudio (no files): the click wheel's tick and clack, and for the rest
-// of the page a soft pop, a glassy tink and the wind in the clouds. The iPod's Clicker setting switches them all.
+// of the page a soft pop and a glassy tink. The iPod's Clicker setting switches them all.
 //
 // Browsers only let a page make sound after a click or a key, so nothing plays (or queues up) before that:
 // the first press anywhere wakes the audio up.
@@ -103,34 +103,3 @@ export function sfx(kind: "tick" | "press" | "pop" | "tink", pitch = 1) {
   }
 }
 
-// The wind while flying through the clouds: `level` 0..1, eased so it swells and fades with the scroll.
-let wind: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null = null;
-export function windLevel(level: number) {
-  const a = live();
-  if (!a) {
-    if (wind && audio) wind.gain.gain.setTargetAtTime(0, audio.ctx.currentTime, 0.1);
-    return;
-  }
-  const { ctx, noise } = a;
-  if (!wind) {
-    if (level <= 0.001) return;
-    const src = ctx.createBufferSource();
-    src.buffer = noise;
-    src.loop = true;
-    const filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.Q.value = 0.7;
-    filter.frequency.value = 400;
-    const low = ctx.createBiquadFilter();
-    low.type = "lowpass";
-    low.frequency.value = 1800;
-    const gain = ctx.createGain();
-    gain.gain.value = 0;
-    src.connect(filter).connect(low).connect(gain).connect(ctx.destination);
-    src.start();
-    wind = { src, filter, gain };
-  }
-  const t = ctx.currentTime;
-  wind.gain.gain.setTargetAtTime(level * 0.16, t, 0.12);
-  wind.filter.frequency.setTargetAtTime(260 + level * 900, t, 0.2);
-}

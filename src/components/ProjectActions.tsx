@@ -126,7 +126,7 @@ export default function ProjectActions({ title, links }: { title: string; links:
       </a>
       {!demo && links.elsewhere ? (
         <p className="act-note">
-          {links.elsewhere.note} —{" "}
+          {links.elsewhere.note}:{" "}
           <a href={links.elsewhere.href} target="_blank" rel="noreferrer">
             {links.elsewhere.label}
           </a>
