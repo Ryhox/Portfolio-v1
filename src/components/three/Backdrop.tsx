@@ -40,6 +40,8 @@ const fragment = /* glsl */ `
   uniform float uFloor;
   // Behind the tech stack the clouds spread evenly over the whole sky (0..1, straight from the scroll).
   uniform float uDense;
+  // Phones: one octave of cloud detail less (on a small screen the finest one breaks the clouds into specks).
+  uniform float uPhone;
   uniform vec2 uRes;
   // The tech stack's capsules: centre x, y and half width, height, in CSS px from the top left.
   uniform vec4 uGlass[${MAX_GLASS}];
@@ -138,10 +140,10 @@ const fragment = /* glsl */ `
     // Two layers of cloud, wide and puffy, clear near the horizon and building up higher. They rise as
     // you scroll down (parallax) and drift across on their own, the near layer faster. The far layer is
     // smaller, fainter and takes on the sky's blue (air in between).
-    // On a tall, narrow (phone) screen the clouds are drawn finer, so as many cross it as cross a wide one
-    // (sized to the height alone, it only ever showed a blurry slice of one).
+    // On a tall, narrow (phone) screen the clouds are drawn a little finer, so more than a slice of one
+    // crosses it, but they stay big, soft shapes.
     float t = uTime;
-    float k = clamp(0.95 / aspect, 1.0, 1.9);
+    float k = clamp(0.62 / aspect, 1.0, 1.3);
     vec2 far = vec2(q.x * 0.75 + t * 0.005, q.y * 1.25 - uScroll * 0.2) * 2.4 * k;
     vec2 near = vec2(q.x * 0.6 + t * 0.011 + 7.3, q.y - uScroll * 0.5 + 2.1) * 1.35 * k;
     // Behind the tech stack, as much cloud low down as up high (the same amount the top of the sky has).
@@ -221,9 +223,9 @@ const fragment = /* glsl */ `
       // Anti-aliased over about a pixel at the rim; inside, only the glass is drawn.
       float cover = clamp(0.5 - gd, 0.0, 1.0) * ga;
       vec3 glass = glassAt(px, gc, gd);
-      col = cover < 1.0 ? mix(skyAt(uv, 5, 0.0), glass, cover) : glass;
+      col = cover < 1.0 ? mix(skyAt(uv, uPhone > 0.5 ? 4 : 5, uPhone * 0.3), glass, cover) : glass;
     } else {
-      col = skyAt(uv, 5, 0.0);
+      col = skyAt(uv, uPhone > 0.5 ? 4 : 5, uPhone * 0.3);
     }
 
     // The hill the page ends on. It rises with the last screen (its foot is the floor the footer sits on).
@@ -314,6 +316,7 @@ const uniforms = {
   uNight: { value: currentTheme() === "dark" ? 1 : 0 },
   uFloor: { value: 1e5 },
   uDense: { value: 0 },
+  uPhone: { value: typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches ? 1 : 0 },
   uRes: { value: new THREE.Vector2(1, 1) },
   uGlass: { value: Array.from({ length: MAX_GLASS }, () => new THREE.Vector4()) },
   uGlassA: { value: new Array<number>(MAX_GLASS).fill(1) },

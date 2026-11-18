@@ -36,6 +36,8 @@ const fragment = `
   uniform float uTime;
   uniform float uP;
   uniform float uNight;
+  // Phones: one octave of detail less (on a small screen the finest one breaks the billows into specks).
+  uniform float uPhone;
   // Each bank's top edge and height (screen heights from the top of the screen).
   uniform vec2 uFront;
   uniform vec2 uBack;
@@ -56,11 +58,13 @@ const fragment = `
     float s = 0.0;
     float a = 0.5;
     for (int i = 0; i < 5; i++) {
+      if (i == 4 && uPhone > 0.5) break;
       s += a * noise(p);
       p = mat2(1.6, 1.2, -1.2, 1.6) * p;
       a *= 0.5;
     }
-    return s;
+    // (The detail left out on phones still adds its average, so there's as much cloud.)
+    return s + (uPhone > 0.5 ? a * 0.5 : 0.0);
   }
   // The sky's cumulus (as in Backdrop.tsx): big shapes, billowy detail on top.
   float cloud(vec2 p) {
@@ -97,7 +101,7 @@ const fragment = `
     float push = 1.0 + smoothstep(0.3, 0.75, uP) * 0.3;
     float x = (vUv.x - 0.5) * aspect / push;
     float sy = (0.5 - vUv.y) / push + 0.5;
-    float k = clamp(1.1 / aspect, 1.0, 2.2);
+    float k = clamp(0.62 / aspect, 1.0, 1.3);
 
     vec4 front = bank(x, sy, uFront, 1.5, vec2(3.1, 1.7), k);
     vec4 back = vec4(0.0);
@@ -144,6 +148,7 @@ export default function CloudPass() {
       time: gl.getUniformLocation(prog, "uTime"),
       p: gl.getUniformLocation(prog, "uP"),
       night: gl.getUniformLocation(prog, "uNight"),
+      phone: gl.getUniformLocation(prog, "uPhone"),
       front: gl.getUniformLocation(prog, "uFront"),
       back: gl.getUniformLocation(prog, "uBack"),
     };
@@ -191,6 +196,7 @@ export default function CloudPass() {
       gl.uniform1f(u.time, (performance.now() - t0) / 1000);
       gl.uniform1f(u.p, cur);
       gl.uniform1f(u.night, theme.night);
+      gl.uniform1f(u.phone, coarse ? 1 : 0);
       gl.uniform2f(u.front, top, FRONT.height);
       gl.uniform2f(u.back, BACK.at - BACK.speed * cur, BACK.height);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
